@@ -1,0 +1,209 @@
+#+title: Emacs Configuration
+#+author: Randy Ridenour
+#+DATE: Time-stamp: <Last changed 2025-06-05 14:24:39 by rlridenour>
+#+email: rlridenour@fastmail.com
+#+STARTUP: overview
+#+PROPERTY: header-args :tangle init.el
+#+auto_tangle: t
+
+* Early Init File
+:PROPERTIES:
+:header-args: :tangle early-init.el
+:END:
+
+** Header
+
+Set the header and prevent package initialization.
+
+#+begin_src emacs-lisp
+  ;; early-init.el -*- lexical-binding: t; -*-
+#+end_src
+
+#+begin_src emacs-lisp :lexical t
+  (setq package-enable-at-startup nil)
+  (setq inhibit-default-init nil)
+#+end_src
+
+** Performance
+
+*** Garbage Collection
+
+#+begin_src emacs-lisp
+  (setq gc-cons-threshold most-positive-fixnum
+	gc-cons-percentage 1)
+
+  (defun +gc-after-focus-change ()
+    "Run GC when frame loses focus."
+    (run-with-idle-timer
+     5 nil
+     (lambda () (unless (frame-focus-state) (garbage-collect)))))
+#+end_src
+
+Raise max lisp nesting depth.
+
+#+begin_src emacs-lisp
+  (setq max-lisp-eval-depth 10000)
+#+end_src
+
+#+begin_src emacs-lisp :lexical t
+  (defun +reset-init-values ()
+    (run-with-idle-timer
+     1 nil
+     (lambda ()
+       (setq file-name-handler-alist default-file-name-handler-alist
+	     gc-cons-percentage 0.1
+	     gc-cons-threshold 100000000)
+       (let ((inhibit-message t))
+	 (message "gc-cons-threshold & file-name-handler-alist restored"))
+       (message "ELPACA LOADING COMPLETE: %s" (emacs-init-time))
+       (when (boundp 'after-focus-change-function)
+	 (add-function :after after-focus-change-function #'+gc-after-focus-change)))))
+
+  (with-eval-after-load 'elpaca
+    (add-hook 'elpaca-after-init-hook '+reset-init-values))
+#+end_src
+
+*** Native Comp
+
+Improve execution speed.
+
+#+begin_src emacs-lisp
+  (customize-set-variable 'native-comp-speed 2)
+  (customize-set-variable 'native-comp-deferred-compilation t)
+#+end_src
+
+Silence native compilation warnings.
+
+#+begin_src emacs-lisp
+  (setq native-comp-async-report-warnings-errors nil)
+#+end_src
+
+*** File-Name-Handler-Alist
+
+Skipping a bunch of regular expression searching in the =file-name-handler-alist= should improve start time.
+
+#+begin_src emacs-lisp :lexical t
+  (defvar default-file-name-handler-alist file-name-handler-alist)
+  (setq file-name-handler-alist nil)
+#+end_src
+
+** Personal Identification
+
+Set my name and email.
+
+#+begin_src emacs-lisp
+  (setq user-full-name "Randy Ridenour"
+	user-mail-address "rlridenour@fastmail.com")
+#+end_src
+
+** UI
+
+*** Clean Up UI
+
+Remove unnecessary GUI elements.
+
+#+begin_src emacs-lisp
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+  (tooltip-mode -1)
+  (setq-default frame-inhibit-implied-resize t)
+  (setq-default inhibit-startup-screen t)
+  (setq-default inhibit-startup-message t)
+  (setq-default initial-scratch-message nil)
+  (setq use-dialog-box nil)
+#+end_src
+
+Make scrolling smoother.
+
+#+begin_src emacs-lisp
+  (setq scroll-conservatively 10
+	scroll-margin 0)
+#+end_src
+
+*** Initial Frame
+
+Set initial frame size to fullheight.
+
+#+begin_src emacs-lisp
+  (setq frame-resize-pixelwise t)
+  (add-to-list 'default-frame-alist '(fullscreen . maximized))
+#+end_src
+
+Bring new frame to front. From [[https://www.reddit.com/r/emacs/comments/1g2hkh8/a_useful_snippet_to_bring_emacs_client_to_the/][a useful snippet to bring emacs client to the front on OS X : r/emacs]].
+
+#+begin_src emacs-lisp
+  (defun initd/bring-emacs-to-front ()
+    "Using applescript, force the Emacs frame to be activated."
+    (when (eq system-type 'darwin)
+      (start-process "bring-emacs-to-front" nil
+		     "osascript"
+		     "-e"
+		     "tell application \"Emacs\" to activate")))
+  (add-hook 'server-after-make-frame-hook #'initd/bring-emacs-to-front)
+#+end_src
+
+Set the frame title format.
+
+#+begin_src emacs-lisp :tangle no
+  (setq-default cursor-in-non-selected-windows nil
+		frame-title-format '("%f [%m]"))
+#+end_src
+
+Set window title to file name.
+
+#+begin_src emacs-lisp
+  (setq frame-title-format
+	'(buffer-file-name (:eval (abbreviate-file-name buffer-file-name))
+			   (dired-directory dired-directory
+					    "%b")))
+#+end_src
+
+Focus new frames
+
+#+begin_src emacs-lisp
+  (defun rr/focus-new-client-frame ()
+    (select-frame-set-input-focus (selected-frame)))
+  (add-hook 'server-after-make-frame-hook #'rr/focus-new-client-frame)
+#+end_src
+
+** Font
+
+Set font to Apple's San Francisco
+
+#+begin_src emacs-lisp
+  ;; Main typeface
+  (set-face-attribute 'default nil :family "SF Mono" :height 160 :weight 'medium)
+  ;; Proportionately spaced typeface
+  (set-face-attribute 'variable-pitch nil :family "SF Pro Text" :height 1.0 :weight 'medium)
+  ;; Monospaced typeface
+  (set-face-attribute 'fixed-pitch nil :family "SF Mono" :height 1.0 :weight 'medium)
+#+end_src
+
+Increase font size.
+
+#+begin_src emacs-lisp
+  (set-face-attribute 'default nil :height 160)
+#+end_src
+
+Add some space between lines.
+
+#+begin_src emacs-lisp
+  (setq-default line-spacing 0.25)
+#+end_src
+
+** Footer
+
+#+begin_src emacs-lisp
+  ;; Local Variables:
+  ;; no-byte-compile: t
+  ;; no-native-compile: t
+  ;; no-update-autoloads: t
+  ;; End:
+#+end_src
+
+* Init Header
+
+#+begin_src emacs-lisp
+  ;;; init.el --- Personal Emacs configuration file -*- lexical-binding: t; -*-
+#+end_src
+
