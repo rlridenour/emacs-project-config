@@ -1,0 +1,30 @@
+# Compiled
+*.elc
+
+# Packaging
+.cask
+
+# Backup files
+*~
+
+# Undo-tree save-files
+*.~undo-tree
+
+elpaca/
+eshell/
+eln-cache/
+custom.el
+recentf
+tramp
+.persistent-scratch
+transient/
+bookmarks
+projects
+elpa/
+*desktop*
+persist/
+url/
+*.plstore
+tldr/
+server/
+image-dired/
