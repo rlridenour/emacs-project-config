@@ -1,1 +1,1 @@
-/Users/rlridenour/.config/emacsp/init.org
+init.org
