@@ -1286,8 +1286,6 @@
   (insert-file-contents "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/org/agenda-links.org")
   (while (org-activate-links (point-max))
     (goto-char (match-end 0)))
-  ;; (end-of-buffer)
-  ;; (insert (concat "\n\n" (get-votd)))
   (beginning-of-buffer))
 
 (add-hook 'org-agenda-finalize-hook #'rr/agenda-links)
@@ -1820,9 +1818,6 @@ installed."
 (use-package ebib
   :config
   (setq ebib-bibtex-dialect 'biblatex)
-  ;;(evil-set-initial-state 'ebib-index-mode 'emacs)
-  ;;(evil-set-initial-state 'ebib-entry-mode 'emacs)
-  ;;(evil-set-initial-state 'ebib-log-mode 'emacs)
   :custom
   (ebib-preload-bib-files '("~/Dropbox/bibtex/rlr.bib")))
 

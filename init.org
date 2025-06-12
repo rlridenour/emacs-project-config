@@ -1,6 +1,6 @@
 #+title: Emacs Configuration
 #+author: Randy Ridenour
-#+DATE: Time-stamp: <Last changed 2025-06-12 07:40:43 by rlridenour>
+#+DATE: Time-stamp: <Last changed 2025-06-12 07:52:43 by rlridenour>
 #+email: rlridenour@fastmail.com
 #+STARTUP: overview
 #+PROPERTY: header-args :tangle init.el
@@ -724,10 +724,6 @@ Set server to use tcp for [[http://yummymelon.com/scrim/][Scrim]]
 #+end_src
 
 Auto insert close bracket.
-
-#+begin_src emacs-lisp :tangle no
-  (electric-pair-mode 1)
-#+end_src
 
 Immediately highlight matching pairs of parentheses and quotes.
 
@@ -2307,8 +2303,6 @@ Set the initial frame. This opens the daily agenda on start-up.
     (insert-file-contents "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/org/agenda-links.org")
     (while (org-activate-links (point-max))
       (goto-char (match-end 0)))
-    ;; (end-of-buffer)
-    ;; (insert (concat "\n\n" (get-votd)))
     (beginning-of-buffer))
 
   (add-hook 'org-agenda-finalize-hook #'rr/agenda-links)
@@ -2399,18 +2393,6 @@ Use Emacs appointment system for notifications.
   (org-agenda-to-appt) ;; generate the appt list from org agenda files on emacs launch
   (run-at-time "24:01" 3600 'org-agenda-to-appt) ;; update appt list hourly
   (add-hook 'org-finalize-agenda-hook 'org-agenda-to-appt) ;; update appt list on agenda view
-#+end_src
-
-** Org Bulletproof
-
-I'm not sure what this doing anymore, so I'm going to disable it for now.
-
-#+begin_src emacs-lisp :tangle no
-  (use-package org-bulletproof
-    :after org
-    :config
-    (setq org-bulletproof-default-ordered-bullet "1.")
-    (global-org-bulletproof-mode +1))
 #+end_src
 
 ** Org Contrib
@@ -3116,9 +3098,6 @@ I don't need to use Pandoc much since everything stays in Org. It might come in 
   (use-package ebib
     :config
     (setq ebib-bibtex-dialect 'biblatex)
-    ;;(evil-set-initial-state 'ebib-index-mode 'emacs)
-    ;;(evil-set-initial-state 'ebib-entry-mode 'emacs)
-    ;;(evil-set-initial-state 'ebib-log-mode 'emacs)
     :custom
     (ebib-preload-bib-files '("~/Dropbox/bibtex/rlr.bib")))
 #+end_src
@@ -3210,23 +3189,6 @@ Using journelly now.
     :after denote)
 #+end_src
 
-Search notes with the xapian syntax (+word -word AND NOT etc), <tab> to preview, <enter> to open the file in the same buffer.
-
-#+begin_src emacs-lisp :tangle no
-  (use-package xeft
-    :commands (xeft)
-    :config
-    (custom-set-faces '(xeft-excerpt-title ((t (:weight bold)))))
-    (custom-set-faces '(xeft-excerpt-body ((t (:height 150)))))
-    :custom
-    ;; Default extension for files created with xeft
-    (xeft-default-extension "org")
-    ;; Where is my search source
-    (xeft-directory rr-notes-dir)
-    ;; Only parse the root directory
-    (xeft-recursive nil))
-#+end_src
-
 [[https://github.com/lmq-10/denote-search][Denote Search]] — [[https://github.com/lmq-10/denote-search/blob/main/README.org][manual]].
 
 #+begin_src emacs-lisp
@@ -3238,7 +3200,6 @@ Search notes with the xapian syntax (+word -word AND NOT etc), <tab> to preview,
     ;; Display keywords in results buffer
     (denote-search-format-heading-function #'denote-search-format-heading-with-keywords))
 #+end_src
-
 ** Notepad
 
 I use this to quickly create a disposable Emacs buffer to write some quick text for pasting into another app. I'm using this with a Keyboard Maestro macro.
@@ -3824,25 +3785,6 @@ Mu4e-alert
     (mu4e-alert-enable-mode-line-display))
 #+end_src
 
-#+begin_src emacs-lisp :tangle no
-  (defun my-mu4e-choose-signature ()
-    "Insert one of a number of sigs"
-    (interactive)
-    (let ((message-signature
-	   (mu4e-read-option "Signature:"
-			     '(("formal" .
-				(concat
-				 "Randy Ridenour, Ph.D.\n"
-				 "Professor of Philosophy\n"
-				 "Oklahoma Baptist University\n\n"
-				 "500 W. University St.\n"
-				 "Shawnee, OK  74804\n"
-				 "Office: (405) 585-4432\n"
-				 ("informal" .
-				  "Joe\n")))))
-	   (message-insert-signature)))
-#+end_src
-
 #+begin_src emacs-lisp
   (defun obu-signature ()
     (interactive)
@@ -4040,11 +3982,6 @@ Tag items — from [[https://www.reddit.com/r/emacs/comments/go5d0v/using_emacs_
     :config
     ;; (setq rmh-elfeed-org-auto-ignore-invalid-feeds t)
     )
-#+end_src
-
-#+begin_src emacs-lisp :tangle no
-  (use-package elfeed-curate
-    :after elfeed)
 #+end_src
 
 ** Mastodon
