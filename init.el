@@ -24,7 +24,7 @@
 (use-package exec-path-from-shell
   :vc (:url "https://github.com/purcell/exec-path-from-shell"
 	      :branch "master")
-  :ensure
+  :demand t
   :config
   (exec-path-from-shell-initialize))
 
@@ -84,32 +84,24 @@
   (interactive)
   (dired "~/.config/fish/functions"))
 
+;; Enable Vertico.
 (use-package vertico
-  :demand
-  :custom (vertico-cycle t)
-  :config
-  (setf (car vertico-multiline) "\n") ;; don't replace newlines
+  :defer 1
+  :custom
+  (vertico-cycle t)
+  ;; (vertico-scroll-margin 0) ;; Different scroll margin
+  ;; (vertico-count 20) ;; Show more candidates
+  ;; (vertico-resize t) ;; Grow and shrink the Vertico minibuffer
+  ;; (vertico-cycle t) ;; Enable cycling for `vertico-next/previous'
+  :init
   (vertico-mode)
-  ;; (setq vertico-multiform-commands
-  ;;  '((consult-line
-  ;;       posframe
-  ;;       (vertico-posframe-poshandler . posframe-poshandler-frame-top-center)
-  ;;       (vertico-posframe-border-width . 10)
-  ;;       ;; NOTE: This is useful when emacs is used in both in X and
-  ;;       ;; terminal, for posframe do not work well in terminal, so
-  ;;       ;; vertico-buffer-mode will be used as fallback at the
-  ;;       ;; moment.
-  ;;       (vertico-posframe-fallback-mode . vertico-buffer-mode))
-  ;;      (t posframe)))
+  :config
   (vertico-multiform-mode 1)
   (setq vertico-multiform-categories
 	  '((file grid)
 	    ;; (jinx grid (vertico-grid-annotate . 20))
 	    ;; (citar buffer)
-	    )
-	  )
-  (setq vertico-cycle t) ;; enable cycling for 'vertico-next' and 'vertico-prev'
-  (add-hook 'rfn-eshadow-update-overlay-hook #'vertico-directory-tidy)
+	    ))
   :bind
   (:map vertico-map
 	  ;; keybindings to cycle through vertico results.
@@ -117,12 +109,35 @@
 	  ("<backspace>" . #'vertico-directory-delete-char)
 	  ("RET" . #'vertico-directory-enter)))
 
+;; Persist history over Emacs restarts. Vertico sorts by history position.
+(use-package savehist
+  :init
+  (savehist-mode))
+
+;; Emacs minibuffer configurations.
+(use-package emacs
+  :custom
+  ;; Enable context menu. `vertico-multiform-mode' adds a menu in the minibuffer
+  ;; to switch display modes.
+  (context-menu-mode t)
+  ;; Support opening new minibuffers from inside existing minibuffers.
+  (enable-recursive-minibuffers t)
+  ;; Hide commands in M-x which do not work in the current mode.  Vertico
+  ;; commands are hidden in normal buffers. This setting is useful beyond
+  ;; Vertico.
+  (read-extended-command-predicate #'command-completion-default-include-p)
+  ;; Do not allow the cursor in the minibuffer prompt
+  (minibuffer-prompt-properties
+   '(read-only t cursor-intangible t face minibuffer-prompt)))
+
 (use-package orderless
+  :defer 1
   :custom
   (completion-styles '(orderless basic))
   (completion-category-overrides '((file (styles partial-completion)))))
 
 (use-package marginalia
+  :defer 1
   :ensure
   :config (marginalia-mode))
 
@@ -146,7 +161,6 @@
   (consult-find (list 4)))
 
 (use-package embark
-  :ensure
   :bind
   (("C-." . #'embark-act)
    ("C-S-a" . #'embark-act)
@@ -186,6 +200,7 @@
   )
 
 (use-package corfu
+  :defer 5
   :custom
   (corfu-cycle t)
   :config
@@ -195,6 +210,7 @@
 (load "~/Dropbox/emacs/my-emacs-abbrev")
 
 (use-package yasnippet
+  :defer 5
   :config
   :custom
   (yas-snippet-dirs '("~/.config/emacs/snippets"))
@@ -268,12 +284,9 @@
 (show-paren-mode)
 (setq show-paren-delay 0)
 
-;; (setq history-length 25)
-(savehist-mode 1)
-
 (use-package modus-themes
   :ensure
-  :demand
+  :demand t
   :config
   ;; Add all your customizations prior to loading the themes
   (setq modus-themes-italic-constructs t
@@ -299,11 +312,11 @@
   (setq display-time-day-and-date t)
   (setq doom-modeline-modal t)
   :hook
-  (elpaca-after-init . doom-modeline-mode))
+  (after-init . doom-modeline-mode))
 
 (use-package spacious-padding
   :demand
-  :after modus-themes doom-modeline
+  :after doom-modeline
   :init
   (setq spacious-padding-subtle-mode-line t)
   (setq spacious-padding-widths
@@ -322,12 +335,13 @@
 (use-package modern-tab-bar
   :ensure
   :vc (:url "https://github.com/aaronjensen/emacs-modern-tab-bar"
-	      :branch "master")
+	  :branch "master")
   :init
   (setq tab-bar-show t
 	  tab-bar-new-button nil
 	  tab-bar-close-button-show nil)
-  (modern-tab-bar-mode))
+  (modern-tab-bar-mode)
+  :commands (tab-new))
 
 (defun rlr/find-file-new-tab ()
   "Open new tab and select recent file."
@@ -336,10 +350,12 @@
   (consult-buffer))
 
 (use-package pulsar
+  :defer 5
   :config
   (pulsar-global-mode 1))
 
-(use-package olivetti)
+(use-package olivetti
+  :commands (olivetti-mode))
 
 (global-set-key (kbd "C-+") #'text-scale-increase)
 (global-set-key (kbd "C--") #'text-scale-decrease)
@@ -353,7 +369,34 @@
   :bind
   (("s-m" . #'major-mode-hydra)))
 
+(use-package casual-suite
+  :ensure
+  :bind
+  (("s-." . #'casual-editkit-main-tmenu)
+   :map reb-mode-map
+   ("s-." . #'casual-re-builder-tmenu)
+   :map calc-mode-map
+   ("s-." . #'casual-calc-tmenu)
+   :map dired-mode-map
+   ("s-." . #'casual-dired-tmenu)
+   :map isearch-mode-map
+   ("s-." . #'casual-isearch-tmenu)
+   :map ibuffer-mode-map
+   ("s-." . #'casual-ibuffer-tmenu)
+   ("F" . #'casual-ibuffer-filter-tmenu)
+   ("s" . #'casual-ibuffer-sortby-tmenu)
+   :map bookmark-bmenu-mode-map
+   ("s-." . #'casual-bookmarks-tmenu)
+   :map org-agenda-mode-map
+   ("s-." . #'casual-agenda-tmenu)
+   :map Info-mode-map
+   ("s-." . #'casual-info-tmenu)
+   :map calendar-mode-map
+   ("s-." . #'casual-calendar-tmenu)
+   ))
+
 (use-package discover
+  :defer 5
   :config
   (global-discover-mode 1))
 
@@ -471,6 +514,7 @@
 (global-set-key (kbd "C-M-S-s-s") #'goto-scratch)
 
 (use-package persistent-scratch
+  :defer 5
   :init
   (persistent-scratch-setup-default))
 
@@ -637,8 +681,7 @@
   (("M-g a" . #'casual-avy-tmenu)))
 
 (use-package fzf
-  :bind
-  ;; Don't forget to set keybinds!
+  :commands (fzf fzf-directory)
   :config
   (setq fzf/args "-x --color bw --print-query --margin=1,0 --no-hscroll"
 	  fzf/executable "fzf"
@@ -652,16 +695,19 @@
 	  fzf/window-height 15))
 
 (use-package rg
+  :defer 5
   :config
   (rg-enable-menu))
 
-(use-package wgrep)
+(use-package wgrep
+  :defer 5)
 
 (use-package deadgrep
   :bind
   (("<f5>" . #'deadgrep)))
 
 (use-package dired+
+  :defer 1
   :vc (:url "https://github.com/emacsmirror/dired-plus"
 	      :branch "master"))
 
@@ -682,7 +728,7 @@
 (add-hook 'dired-after-readin  'hide-dired-details-include-all-subdir-paths)
 
 (use-package diredfl
-  :ensure t
+  :defer 1
   :config
   (diredfl-global-mode 1))
 
@@ -718,7 +764,26 @@
 (define-key dired-mode-map (kbd "s-j") #'rlr/dired-search-and-enter)
 (define-key dired-mode-map (kbd "%s") #'my-dired-substspaces)
 
-(use-package reveal-in-osx-finder)
+(use-package reveal-in-osx-finder
+  :defer 5)
+
+(use-package eat
+  :defer 5
+  :vc (:url "https://codeberg.org/akib/emacs-eat"
+	      :branch "master"))
+
+(use-package term-toggle
+  :vc (:url "https://github.com/amno1/emacs-term-toggle"
+	      :branch "master")
+  :config
+  (setq term-toggle-no-confirm-exit t)
+  (defun term-toggle-eat ()
+    "Toggle `term'."
+    (interactive) (term-toggle 'eat))
+  :bind
+  (("<f2>" . #'term-toggle-eat)
+   ("<S-f2>" . #'term-toggle-eshell))
+  )
 
 (setq async-shell-command-buffer "new-buffer")
 
@@ -736,14 +801,26 @@
 
 (setq eshell-scroll-to-bottom-on-input "this")
 
-(use-package tldr)
+(use-package terminal-here
+  :config
+  (setq terminal-here-mac-terminal-command #'ghostty)
+  :bind
+  (("C-`" . #'terminal-here-launch)))
+
+(use-package tldr
+  :commands (tldr))
 
 (setq help-window-select t)
 (setq Man-notify-method 'aggressive)
 
 (which-key-mode)
 
-(use-package helpful)
+(use-package helpful
+:bind
+(("C-h v" . #'helpful-variable)
+("C-h k" . #'helpful-key)
+("C-h x" . #'helpful-command)
+))
 
 (defun insert-date-string ()
   "Insert current date yyyymmdd."
@@ -819,6 +896,7 @@
   (("C-x C-a" . #'accent-menu)))
 
 (use-package aggressive-indent
+  :defer 5
   :config
   (global-aggressive-indent-mode 1))
 
@@ -839,13 +917,16 @@
   (("C-=" . #'er/expand-region)))
 
 (use-package hungry-delete
+  :defer 5
   :config
   (global-hungry-delete-mode))
 
-(use-package transient)
-(use-package hl-todo)
+;; (use-package transient)
+(use-package hl-todo
+  :after magit)
 
 (use-package magit
+  :defer 5
   :init
   (require 'transient)
   :custom
@@ -853,7 +934,9 @@
   :config
   (transient-bind-q-to-quit))
 
-(use-package osx-dictionary)
+(use-package osx-dictionary
+  :bind
+  (("C-c d o" . #'osx-dictionary-search-pointer)))
 
 (use-package shrink-whitespace
   :bind
@@ -871,9 +954,11 @@
   (require 'smartparens-config))
 
 (use-package speedrect
+  :defer 5
   :config (speedrect-mode))
 
 (use-package super-save
+  :defer 1
   :config
   (setq super-save-auto-save-when-idle t
 	  auto-save-default nil
@@ -884,6 +969,7 @@
   (super-save-mode +1))
 
 (use-package titlecase
+  :commands (titlecase-dwim)
   :config
   (setq titlecase-style "chicago"))
 
@@ -893,7 +979,8 @@
   :bind
   (("C-x u" . vundo)))
 
-(use-package unfill)
+(use-package unfill
+:commands (unfill-paragraph unfill-region))
 
 (global-set-key (kbd "<s-up>") #'beginning-of-buffer)
 (global-set-key (kbd "<s-down>")  #'end-of-buffer)
@@ -1075,7 +1162,6 @@
  org-html-with-latex 'html)
 
 (use-package org-auto-tangle
-  :ensure
   :hook (org-mode . org-auto-tangle-mode))
 
 ;; Org-capture
@@ -1208,6 +1294,8 @@
 
 (setq org-return-follows-link t)
 
+(define-key org-agenda-mode-map (kbd "<SPC>") #'link-hint-open-link)
+
 (setopt org-link-elisp-skip-confirm-regexp "rlr.*")
 
 (setq appt-time-msg-list nil)    ;; clear existing appt list
@@ -1273,9 +1361,11 @@
 				(cond ((= off 0) 0) (at-end 2) (t 1)))))
 	      (if is-word (org-emphasize type))))))))
 
-(use-package org-mac-link)
+(use-package org-mac-link
+  :commands (org-mac-link-safari-insert-frontmost-url))
 
-(use-package org-web-tools)
+(use-package org-web-tools
+:commands (org-web-tools-read-url-as-org))
 
 (defun rlr/save-web-page-as-org-file ()
   (interactive)
@@ -1710,7 +1800,8 @@ installed."
    start end
    "pandoc -f markdown -t org --wrap=preserve" t t))
 
-(use-package pandoc-mode)
+(use-package pandoc-mode
+  :defer 10)
 
 (use-package citar
   :bind (("C-c C-b" . citar-insert-citation)
@@ -1736,17 +1827,18 @@ installed."
   (ebib-preload-bib-files '("~/Dropbox/bibtex/rlr.bib")))
 
 (use-package denote
-  :config
-  (setq denote-directory "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/Documents/notes/denote/")
-  (setq denote-infer-keywords t)
-  (setq denote-sort-keywords t)
-  (setq denote-prompts '(title keywords))
-  (setq denote-date-format nil))
+:commands (denote)
+    :config
+    (setq denote-directory "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/Documents/notes/denote/")
+    (setq denote-infer-keywords t)
+    (setq denote-sort-keywords t)
+    (setq denote-prompts '(title keywords))
+    (setq denote-date-format nil))
 
 (use-package consult-denote
   :bind
   (("C-c n f" .  #'consult-denote-find)
-  ("C-c n g"  . #'consult-denote-grep))
+   ("C-c n g"  . #'consult-denote-grep))
   :config
   (consult-denote-mode 1))
 
@@ -1770,8 +1862,9 @@ installed."
     denote-org-dblock-insert-files-as-headings))
 
 (use-package consult-notes
-  :config
-  (consult-notes-denote-mode))
+:commands (consult-notes)
+    :config
+    (consult-notes-denote-mode))
 
 (use-package citar-denote
   :after citar denote
@@ -1783,6 +1876,7 @@ installed."
   :after denote)
 
 (use-package denote-search
+  :commands (denote-search)
   :custom
   ;; Disable help string (set it once you learn the commands)
   ;; (denote-search-help-string "")
@@ -1905,7 +1999,8 @@ installed."
      (latex (format "\href{%s}{%s}"
 		      path (or desc "video"))))))
 
-(use-package webfeeder)
+(use-package webfeeder
+  :defer 10)
 
 (defun orgblog-all-tag-lines ()
   "Get filetag lines from all posts."
@@ -1958,53 +2053,54 @@ installed."
   (save-buffer))
 
 (use-package website2org
-:vc (:url "https://github.com/rtrppl/website2org"
-:branch "main")
-    :config
-    (setq website2org-directory "~/icloud/web-saves/website2org/") ;; if needed, see below
-    (setq website2org-additional-meta nil)
-    :bind
-    (:map global-map
-    ("C-M-s-<down>" . website2org)
-    ("C-M-s-<up>" . website2org-temp)))
+  :vc (:url "https://github.com/rtrppl/website2org"
+	  :branch "main")
+  :config
+  (setq website2org-directory "~/icloud/web-saves/website2org/") ;; if needed, see below
+  (setq website2org-additional-meta nil)
+  :bind
+  (:map global-map
+	  ("C-M-s-<down>" . website2org)
+	  ("C-M-s-<up>" . website2org-temp)))
 
-(use-package htmlize)
+(use-package htmlize
+  :defer 10)
 
 (use-package emmet-mode
   :bind
   (:map html-mode-map
-	      ("C-M-S-s-<right>" . #'emmet-next-edit-point)
-	      ("C-M-S-s-<left>" . #'emmet-prev-edit-point)))
+	  ("C-M-S-s-<right>" . #'emmet-next-edit-point)
+	  ("C-M-S-s-<left>" . #'emmet-prev-edit-point)))
 
 (defun rlr/open-eww-link-new-buffer ()
-      (interactive)
-      (link-hint-copy-link)
-      (tab-new)
-      (setq new-buffer-url (current-kill 0 t))
-      (switch-to-buffer (generate-new-buffer "*eww*"))
-      (eww-mode)
-      (eww new-buffer-url))
+  (interactive)
+  (link-hint-copy-link)
+  (tab-new)
+  (setq new-buffer-url (current-kill 0 t))
+  (switch-to-buffer (generate-new-buffer "*eww*"))
+  (eww-mode)
+  (eww new-buffer-url))
 
-    (defun rlr/eww-toggle-images ()
-      "Toggle whether images are loaded and reload the current page from cache."
-      (interactive)
-      (setq-local shr-inhibit-images (not shr-inhibit-images))
-      (eww-reload t)
-      (message "Images are now %s"
-	       (if shr-inhibit-images "off" "on")))
+(defun rlr/eww-toggle-images ()
+  "Toggle whether images are loaded and reload the current page from cache."
+  (interactive)
+  (setq-local shr-inhibit-images (not shr-inhibit-images))
+  (eww-reload t)
+  (message "Images are now %s"
+	     (if shr-inhibit-images "off" "on")))
 
-    (setq-default shr-inhibit-images t)   ; toggle with `I`
-    (setq-default shr-use-fonts t)      ; toggle with `F`
-    
+(setq-default shr-inhibit-images t)   ; toggle with `I`
+(setq-default shr-use-fonts t)      ; toggle with `F`
+
 (defun rrnet ()
-      (interactive)
-      (eww-browse-url "randyridenour.net")
-      )
-    
+  (interactive)
+  (eww-browse-url "randyridenour.net")
+  )
+
 (defun sep ()
-      (interactive)
-      (eww-browse-url "plato.stanford.edu")
-      )
+  (interactive)
+  (eww-browse-url "plato.stanford.edu")
+  )
 
 (define-key eww-mode-map (kbd "I") #'rlr/eww-toggle-images)
 (define-key eww-mode-map (kbd "f") #'link-hint-open-link)
@@ -2019,39 +2115,39 @@ installed."
   (unless (org-region-active-p)
     (let ((shr-width 80)) (eww-readable)))
   (let* ((start (if (org-region-active-p) (region-beginning) (point-min)))
-	    (end (if (org-region-active-p) (region-end) (point-max)))
-	    (buff (or dest (generate-new-buffer "*eww-to-org*")))
-	    (link (eww-current-url))
-	    (title (or (plist-get eww-data :title) "")))
+	   (end (if (org-region-active-p) (region-end) (point-max)))
+	   (buff (or dest (generate-new-buffer "*eww-to-org*")))
+	   (link (eww-current-url))
+	   (title (or (plist-get eww-data :title) "")))
     (with-current-buffer buff
-	 (insert "#+title: " title "\n#+link: " link "\n\n")
-	 (org-mode))
+	(insert "#+title: " title "\n#+link: " link "\n\n")
+	(org-mode))
     (save-excursion
-	 (goto-char start)
-	 (while (< (point) end)
-	   (let* ((p (point))
-		  (props (text-properties-at p))
-		  (k (seq-find (lambda (x) (plist-get props x))
-			       '(shr-url image-url outline-level face)))
-		  (prop (and k (list k (plist-get props k))))
-		  (next (if prop
-			    (next-single-property-change p (car prop) nil end)
-			  (next-property-change p nil end)))
-		  (txt (buffer-substring (point) next))
-		  (txt (replace-regexp-in-string "\\*" "·" txt)))
-	     (with-current-buffer buff
-	       (insert
-		(pcase prop
-		  ((and (or `(shr-url ,url) `(image-url ,url))
-			(guard (string-match-p "^http" url)))
-		   (let ((tt (replace-regexp-in-string "\n\\([^$]\\)" " \\1" txt)))
-		     (org-link-make-string url tt)))
-		  (`(outline-level ,n)
-		   (concat (make-string (- (* 2 n) 1) ?*) " " txt "\n"))
-		  ('(face italic) (format "/%s/ " (string-trim txt)))
-		  ('(face bold) (format "*%s* " (string-trim txt)))
-		  (_ txt))))
-	     (goto-char next))))
+	(goto-char start)
+	(while (< (point) end)
+	  (let* ((p (point))
+		 (props (text-properties-at p))
+		 (k (seq-find (lambda (x) (plist-get props x))
+			      '(shr-url image-url outline-level face)))
+		 (prop (and k (list k (plist-get props k))))
+		 (next (if prop
+			   (next-single-property-change p (car prop) nil end)
+			 (next-property-change p nil end)))
+		 (txt (buffer-substring (point) next))
+		 (txt (replace-regexp-in-string "\\*" "·" txt)))
+	    (with-current-buffer buff
+	      (insert
+	       (pcase prop
+		 ((and (or `(shr-url ,url) `(image-url ,url))
+		       (guard (string-match-p "^http" url)))
+		  (let ((tt (replace-regexp-in-string "\n\\([^$]\\)" " \\1" txt)))
+		    (org-link-make-string url tt)))
+		 (`(outline-level ,n)
+		  (concat (make-string (- (* 2 n) 1) ?*) " " txt "\n"))
+		 ('(face italic) (format "/%s/ " (string-trim txt)))
+		 ('(face bold) (format "*%s* " (string-trim txt)))
+		 (_ txt))))
+	    (goto-char next))))
     (pop-to-buffer buff)
     (goto-char (point-min))))
 
@@ -2066,6 +2162,7 @@ installed."
   (eww rlr-org-url))
 
 (use-package isgd
+  :commands (isgd-copy-url-at-point isgd-replace-url-at-point)
   :custom
   (isgd-logstats nil)
   (isgd-ask-custom-url t))
@@ -2076,20 +2173,25 @@ installed."
    ("C-c l o" . #'link-hint-open-link)
    ("C-c l c" . #'link-hint-copy-link)))
 
-(use-package fish-mode)
+(use-package fish-mode
+:mode ("\\.fish\\'" . Fish-mode))
 
 (use-package fish-completion
-    :ensure 
-:vc (:url "https://github.com/LemonBreezes/emacs-fish-completion"
-:branch "master")
-    :config
-    (when (and (executable-find "fish")
-	       (require 'fish-completion nil t))
-      (global-fish-completion-mode)))
+  :defer 10
+  :vc (:url "https://github.com/LemonBreezes/emacs-fish-completion"
+	  :branch "master")
+  :config
+  (when (and (executable-find "fish")
+	   (require 'fish-completion nil t))
+    (global-fish-completion-mode)))
 
-(use-package sly)
+(use-package sly
+  :commands (sly)
+  :config
+  (setq inferior-lisp-program "/opt/homebrew/bin/sbcl"))
 
-(use-package yaml-mode)
+(use-package yaml-mode
+:mode ("\\.yml\\'" . YAML-mode))
 
 (use-package mu4e
   :load-path "/opt/homebrew/Cellar/mu/1.12.11/share/emacs/site-lisp/mu/mu4e/mu4e/"
@@ -2198,6 +2300,7 @@ installed."
 		nil "."))))
 
 (use-package org-mime
+  :after mu4e
   :commands (org-mime-edit-mail-in-org-mode)
   :config
   (setq org-mime-export-options '(:section-numbers nil
@@ -2211,6 +2314,7 @@ installed."
   (rlr/delete-tab-or-frame))
 
 (use-package mu4e-alert
+  :after mu4e
   :config
   (mu4e-alert-enable-mode-line-display))
 
@@ -2253,8 +2357,8 @@ installed."
   (mu4e-update-mail-and-index 1)
   )
 
- (global-set-key (kbd "C-M-s-r") #'rlr/read-mail-news)
- (global-set-key (kbd "H-m") #'mu4e-transient-menu)
+(global-set-key (kbd "C-M-s-r") #'rlr/read-mail-news)
+(global-set-key (kbd "H-m") #'mu4e-transient-menu)
 
 (use-package consult-mu
   :vc (:url "https://github.com/armindarvish/consult-mu"
@@ -2318,18 +2422,18 @@ installed."
     (call-interactively (cdr (assoc choice choices)))))
 
 
- (global-set-key (kbd "C-M-S-s-b") #'rlr/select-browser)
+(global-set-key (kbd "C-M-S-s-b") #'rlr/select-browser)
 
 (use-package elfeed
-    :init
-    (setq elfeed-db-directory "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/elfeed")
-    :config
-    :bind
-    (
-:map elfeed-search-mode-map
-	      ("q" . #'rlr/elfeed-save-db-and-quit)
-    :map elfeed-show-mode-map
-	      ("S-<SPC>" . #'scroll-down)))
+  :init
+  (setq elfeed-db-directory "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/elfeed")
+  :config
+  :bind
+  (
+   :map elfeed-search-mode-map
+   ("q" . #'rlr/elfeed-save-db-and-quit)
+   :map elfeed-show-mode-map
+   ("S-<SPC>" . #'scroll-down)))
 
 (defun rlr/elfeed-load-db-and-open ()
   "Load elfeed db before opening"
@@ -2352,10 +2456,10 @@ installed."
   (rlr/delete-tab-or-frame))
 
 (defmacro elfeed-tag-selection-as (mytag)
-    "Tag elfeed entry as MYTAG"
-    `(lambda (&optional user-generic-p)
-       (interactive "P")
-       (let ((entries (elfeed-search-selected)))
+  "Tag elfeed entry as MYTAG"
+  `(lambda (&optional user-generic-p)
+     (interactive "P")
+     (let ((entries (elfeed-search-selected)))
 	 (cl-loop for entry in entries
 		  do (funcall (if (elfeed-tagged-p ,mytag entry)
 				  #'elfeed-untag #'elfeed-tag)
@@ -2366,7 +2470,7 @@ installed."
 
 (define-key elfeed-search-mode-map (kbd "l") (elfeed-tag-selection-as 'readlater))
 (define-key elfeed-search-mode-map (kbd "d") (elfeed-tag-selection-as 'junk))
-(define-key elfeed-search-mode-map (kbd "m") #'(elfeed-tag-selection-as 'starred))
+(define-key elfeed-search-mode-map (kbd "m") (elfeed-tag-selection-as 'starred))
 (define-key elfeed-search-mode-map (kbd "M") #'(lambda () (interactive) (elfeed-search-set-filter "@6-months-ago +starred")))
 (define-key elfeed-search-mode-map (kbd "L") #'(lambda () (interactive) (elfeed-search-set-filter "+readlater")))
 
@@ -2387,9 +2491,11 @@ installed."
   (setq-default pdf-view-display-size 'fit-width)
   :bind
   (:map pdf-view-mode-map
-	      ("C-s" . #'isearch-forward)))
+	  ("C-s" . #'isearch-forward)))
 
-(use-package chordpro-mode)
+(use-package chordpro-mode
+:mode ("\\.cho\\'" . chordpro-mode)
+)
 
 (pretty-hydra-define hydra-toggle
   (:color teal :quit-key "q" :title "Toggle")
@@ -2481,22 +2587,22 @@ installed."
     ("M" writeroom-toggle-mode-line "toggle modeline"))))
 
 (pretty-hydra-define hydra-new
-(:color teal :quit-key "q" title: "New")
-("Frame"
- (("f" make-frame-command "new frame"))
- "Denote"
- (("c" org-capture "capture")
-  ("n" denote "note")
-  ("v" denote-menu-list-notes "view notes")
-  ("j" denote-journal-extras-new-or-existing-entry "journal"))
- "Writing"
- (("b" rlrt-new-post "blog post")
-  ("a" rlrt-new-article "article"))
- "Teaching"
- (("l" rlrt-new-lecture "lecture")
-  ("h" rlrt-new-handout "handout")
-  ("s" rlrt-new-syllabus "syllabus"))
- ))
+  (:color teal :quit-key "q" title: "New")
+  ("Frame"
+   (("f" make-frame-command "new frame"))
+   "Denote"
+   (("c" org-capture "capture")
+    ("n" denote "note")
+    ("v" denote-menu-list-notes "view notes")
+    ("j" denote-journal-extras-new-or-existing-entry "journal"))
+   "Writing"
+   (("b" rlrt-new-post "blog post")
+    ("a" rlrt-new-article "article"))
+   "Teaching"
+   (("l" rlrt-new-lecture "lecture")
+    ("h" rlrt-new-handout "handout")
+    ("s" rlrt-new-syllabus "syllabus"))
+   ))
 
 (pretty-hydra-define hydra-logic
   (:color pink :quit-key "0" :title "Logic")
@@ -2839,6 +2945,15 @@ installed."
 (defun reload-user-init-file()
   (interactive)
   (load-file user-init-file))
+
+(defun rlr/display-startup-time ()
+  (message "Emacs loaded in %s with %d garbage collections."
+	     (format "%.2f seconds"
+		     (float-time
+		(time-subtract after-init-time before-init-time)))
+	     gcs-done))
+
+(add-hook 'emacs-startup-hook #'rlr/display-startup-time)
 
 (setq default-directory "~/")
 

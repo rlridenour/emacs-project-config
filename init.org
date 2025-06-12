@@ -1,6 +1,6 @@
 #+title: Emacs Configuration
 #+author: Randy Ridenour
-#+DATE: Time-stamp: <Last changed 2025-06-08 17:32:57 by rlridenour>
+#+DATE: Time-stamp: <Last changed 2025-06-12 07:40:43 by rlridenour>
 #+email: rlridenour@fastmail.com
 #+STARTUP: overview
 #+PROPERTY: header-args :tangle init.el
@@ -101,6 +101,14 @@ Make scrolling smoother.
 #+end_src
 
 *** Initial Frame
+
+Suppress "When done with this frame..." message.
+
+#+begin_src emacs-lisp
+  (setq server-client-instructions nil)
+#+end_src
+
+
 
 Set initial frame size to fullheight.
 
@@ -243,7 +251,7 @@ Use Exec-Path-From-Shell to set path.
   (use-package exec-path-from-shell
     :vc (:url "https://github.com/purcell/exec-path-from-shell"
 	      :branch "master")
-    :ensure
+    :demand t
     :config
     (exec-path-from-shell-initialize))
 #+end_src
@@ -376,45 +384,59 @@ Open fish functions directory.
 
 ** Vertico
 
-#+begin_src emacs-lisp :lexical t
+#+begin_src emacs-lisp
+  ;; Enable Vertico.
   (use-package vertico
-    :demand
-    :custom (vertico-cycle t)
-    :config
-    (setf (car vertico-multiline) "\n") ;; don't replace newlines
+    :defer 1
+    :custom
+    (vertico-cycle t)
+    ;; (vertico-scroll-margin 0) ;; Different scroll margin
+    ;; (vertico-count 20) ;; Show more candidates
+    ;; (vertico-resize t) ;; Grow and shrink the Vertico minibuffer
+    ;; (vertico-cycle t) ;; Enable cycling for `vertico-next/previous'
+    :init
     (vertico-mode)
-    ;; (setq vertico-multiform-commands
-    ;;  '((consult-line
-    ;;       posframe
-    ;;       (vertico-posframe-poshandler . posframe-poshandler-frame-top-center)
-    ;;       (vertico-posframe-border-width . 10)
-    ;;       ;; NOTE: This is useful when emacs is used in both in X and
-    ;;       ;; terminal, for posframe do not work well in terminal, so
-    ;;       ;; vertico-buffer-mode will be used as fallback at the
-    ;;       ;; moment.
-    ;;       (vertico-posframe-fallback-mode . vertico-buffer-mode))
-    ;;      (t posframe)))
+    :config
     (vertico-multiform-mode 1)
     (setq vertico-multiform-categories
 	  '((file grid)
 	    ;; (jinx grid (vertico-grid-annotate . 20))
 	    ;; (citar buffer)
-	    )
-	  )
-    (setq vertico-cycle t) ;; enable cycling for 'vertico-next' and 'vertico-prev'
-    (add-hook 'rfn-eshadow-update-overlay-hook #'vertico-directory-tidy)
+	    ))
     :bind
     (:map vertico-map
 	  ;; keybindings to cycle through vertico results.
 	  ("C-h" . #'+minibuffer-up-dir)
 	  ("<backspace>" . #'vertico-directory-delete-char)
 	  ("RET" . #'vertico-directory-enter)))
+
+  ;; Persist history over Emacs restarts. Vertico sorts by history position.
+  (use-package savehist
+    :init
+    (savehist-mode))
+
+  ;; Emacs minibuffer configurations.
+  (use-package emacs
+    :custom
+    ;; Enable context menu. `vertico-multiform-mode' adds a menu in the minibuffer
+    ;; to switch display modes.
+    (context-menu-mode t)
+    ;; Support opening new minibuffers from inside existing minibuffers.
+    (enable-recursive-minibuffers t)
+    ;; Hide commands in M-x which do not work in the current mode.  Vertico
+    ;; commands are hidden in normal buffers. This setting is useful beyond
+    ;; Vertico.
+    (read-extended-command-predicate #'command-completion-default-include-p)
+    ;; Do not allow the cursor in the minibuffer prompt
+    (minibuffer-prompt-properties
+     '(read-only t cursor-intangible t face minibuffer-prompt)))
 #+end_src
 
 ** Orderless
 
 #+begin_src emacs-lisp
   (use-package orderless
+    :defer 1
     :custom
     (completion-styles '(orderless basic))
     (completion-category-overrides '((file (styles partial-completion)))))
@@ -426,6 +448,7 @@ Enrich existing commands with completion annotations
 
 #+begin_src emacs-lisp
   (use-package marginalia
+    :defer 1
     :ensure
     :config (marginalia-mode))
 #+end_src
@@ -461,7 +484,6 @@ Some functions to use with Consult.
 
 #+begin_src emacs-lisp
   (use-package embark
-    :ensure
     :bind
     (("C-." . #'embark-act)
      ("C-S-a" . #'embark-act)
@@ -511,6 +533,7 @@ Some functions to use with Consult.
 
 #+begin_src emacs-lisp
   (use-package corfu
+    :defer 5
     :custom
     (corfu-cycle t)
     :config
@@ -534,6 +557,7 @@ https://github.com/joaotavora/yasnippet
 
 #+begin_src emacs-lisp :lexical t
   (use-package yasnippet
+    :defer 5
     :config
     :custom
     (yas-snippet-dirs '("~/.config/emacs/snippets"))
@@ -554,7 +578,8 @@ https://github.com/joaotavora/yasnippet
 *** AAS
 
 #+begin_src emacs-lisp :tangle no
-  (use-package aas)
+  (use-package aas
+    :defer t)
 #+end_src
 
 **** LAAS
@@ -711,12 +736,6 @@ Immediately highlight matching pairs of parentheses and quotes.
   (setq show-paren-delay 0)
 #+end_src
 
-Save minibuffer history.
-
-#+begin_src emacs-lisp
-  ;; (setq history-length 25)
-  (savehist-mode 1)
-#+end_src
 
 ** Appearance
 
@@ -725,7 +744,7 @@ Save minibuffer history.
 #+begin_src emacs-lisp
   (use-package modus-themes
     :ensure
-    :demand
+    :demand t
     :config
     ;; Add all your customizations prior to loading the themes
     (setq modus-themes-italic-constructs t
@@ -755,7 +774,7 @@ Save minibuffer history.
     (setq display-time-day-and-date t)
     (setq doom-modeline-modal t)
     :hook
-    (elpaca-after-init . doom-modeline-mode))
+    (after-init . doom-modeline-mode))
 #+end_src
 
 *** Spacious-Padding
@@ -763,7 +782,7 @@ Save minibuffer history.
 #+begin_src emacs-lisp
   (use-package spacious-padding
     :demand
-    :after modus-themes doom-modeline
+    :after doom-modeline
     :init
     (setq spacious-padding-subtle-mode-line t)
     (setq spacious-padding-widths
@@ -788,12 +807,13 @@ Save minibuffer history.
   (use-package modern-tab-bar
     :ensure
     :vc (:url "https://github.com/aaronjensen/emacs-modern-tab-bar"
-	      :branch "master")
+	  :branch "master")
     :init
     (setq tab-bar-show t
 	  tab-bar-new-button nil
 	  tab-bar-close-button-show nil)
-    (modern-tab-bar-mode))
+    (modern-tab-bar-mode)
+    :commands (tab-new))
 #+end_src
 
 I can't imagine wanting the same buffer in two tabs, so this calls consult-buffer when opening a new tab.
@@ -810,6 +830,7 @@ I can't imagine wanting the same buffer in two tabs, so this calls consult-buffe
 
 #+begin_src emacs-lisp
   (use-package pulsar
+    :defer 5
     :config
     (pulsar-global-mode 1))
 #+end_src
@@ -817,7 +838,8 @@ I can't imagine wanting the same buffer in two tabs, so this calls consult-buffe
 *** Olivetti
 
 #+begin_src emacs-lisp
-  (use-package olivetti)
+  (use-package olivetti
+    :commands (olivetti-mode))
 #+end_src
 
 *** Text Scaling
@@ -848,32 +870,32 @@ Disable changing text size with mouse and trackpad
 
 *** Casual Suite
 
-#+begin_src emacs-lisp :tangle no
+#+begin_src emacs-lisp
   (use-package casual-suite
     :ensure
     :bind
-    ("s-." #'casual-editkit-main-tmenu)
-    (:keymaps 'reb-mode-map
-	      "s-." #'casual-re-builder-tmenu)
-    (:keymaps 'calc-mode-map
-	      "s-." #'casual-calc-tmenu)
-    (:keymaps 'dired-mode-map
-	      "s-." #'casual-dired-tmenu)
-    (:keymaps 'isearch-mode-map
-	      "s-." #'casual-isearch-tmenu)
-    (:keymaps 'ibuffer-mode-map
-	      "s-." #'casual-ibuffer-tmenu
-	      "F" #'casual-ibuffer-filter-tmenu
-	      "s" #'casual-ibuffer-sortby-tmenu)
-    (:keymaps 'bookmark-bemenu-mode-map
-	      "s-." #'casual-bookmarks-tmenu)
-    (:keymaps 'org-agenda-mode-map
-	      "s-." #'casual-agenda-tmenu)
-    (:keymaps 'Info-mode-map
-	      "s-." #'casual-info-tmenu)
-    (:keymaps 'calendar-mode-map
-	      "s-." #'casual-calendar-tmenu)
-    )
+    (("s-." . #'casual-editkit-main-tmenu)
+     :map reb-mode-map
+     ("s-." . #'casual-re-builder-tmenu)
+     :map calc-mode-map
+     ("s-." . #'casual-calc-tmenu)
+     :map dired-mode-map
+     ("s-." . #'casual-dired-tmenu)
+     :map isearch-mode-map
+     ("s-." . #'casual-isearch-tmenu)
+     :map ibuffer-mode-map
+     ("s-." . #'casual-ibuffer-tmenu)
+     ("F" . #'casual-ibuffer-filter-tmenu)
+     ("s" . #'casual-ibuffer-sortby-tmenu)
+     :map bookmark-bmenu-mode-map
+     ("s-." . #'casual-bookmarks-tmenu)
+     :map org-agenda-mode-map
+     ("s-." . #'casual-agenda-tmenu)
+     :map Info-mode-map
+     ("s-." . #'casual-info-tmenu)
+     :map calendar-mode-map
+     ("s-." . #'casual-calendar-tmenu)
+     ))
 #+end_src
 
 *** Discover
@@ -882,6 +904,7 @@ From [[https://github.com/mickeynp/discover.el][mickeynp/discover.el: Discover m
 
 #+begin_src emacs-lisp
   (use-package discover
+    :defer 5
     :config
     (global-discover-mode 1))
 #+end_src
@@ -1115,6 +1138,7 @@ Use ~persistent-scratch~ to save scratch file between sessions.
 
 #+begin_src emacs-lisp
   (use-package persistent-scratch
+    :defer 5
     :init
     (persistent-scratch-setup-default))
 #+end_src
@@ -1348,8 +1372,7 @@ Find non-ascii characters in buffer.
 
 #+begin_src emacs-lisp
   (use-package fzf
-    :bind
-    ;; Don't forget to set keybinds!
+    :commands (fzf fzf-directory)
     :config
     (setq fzf/args "-x --color bw --print-query --margin=1,0 --no-hscroll"
 	  fzf/executable "fzf"
@@ -1367,6 +1390,7 @@ Find non-ascii characters in buffer.
 
 #+begin_src emacs-lisp
   (use-package rg
+    :defer 5
     :config
     (rg-enable-menu))
 #+end_src
@@ -1374,7 +1398,8 @@ Find non-ascii characters in buffer.
 *** Wgrep
 
 #+begin_src emacs-lisp
-  (use-package wgrep)
+  (use-package wgrep
+    :defer 5)
 #+end_src
 
 *** Deadgrep
@@ -1391,6 +1416,7 @@ Hide file details and absolute path by default, from [[https://lmno.lol/alvaro/h
 
 #+begin_src emacs-lisp
   (use-package dired+
+    :defer 1
     :vc (:url "https://github.com/emacsmirror/dired-plus"
 	      :branch "master"))
 #+end_src
@@ -1417,7 +1443,7 @@ Add some color with diredfl.
 
 #+begin_src emacs-lisp
   (use-package diredfl
-    :ensure t
+    :defer 1
     :config
     (diredfl-global-mode 1))
 #+end_src
@@ -1484,21 +1510,25 @@ Replace spaces in file names with hyphens using "%s" in dired.
 *** Reveal in Finder
 
 #+begin_src emacs-lisp
-  (use-package reveal-in-osx-finder)
+  (use-package reveal-in-osx-finder
+    :defer 5)
 #+end_src
 
 ** Shells
 
 *** Eat
 
-#+begin_src emacs-lisp :tangle no
-  (use-package eat)
+#+begin_src emacs-lisp
+  (use-package eat
+    :defer 5
+    :vc (:url "https://codeberg.org/akib/emacs-eat"
+	      :branch "master"))
 #+end_src
 
 *** Term Toggle
 https://github.com/amno1/emacs-term-toggle
 
-#+begin_src emacs-lisp :tangle no
+#+begin_src emacs-lisp
   (use-package term-toggle
     :vc (:url "https://github.com/amno1/emacs-term-toggle"
 	      :branch "master")
@@ -1549,21 +1579,19 @@ Make output scroll to bottom in Eshell.
 
 Go to current directory in Ghostty.
 
-#+begin_src emacs-lisp :tangle no
+#+begin_src emacs-lisp
   (use-package terminal-here
-    :vc (:url "https://github.com/davidshepherd7/terminal-here"
-	      :branch "master")
     :config
-    (setq terminal-here-mac-terminal-command 'ghostty)
+    (setq terminal-here-mac-terminal-command #'ghostty)
     :bind
-    (("C-`" . #'terminal-here-launch))
-    )
+    (("C-`" . #'terminal-here-launch)))
 #+end_src
 
 *** TLDR
 
 #+begin_src emacs-lisp
-  (use-package tldr)
+  (use-package tldr
+    :commands (tldr))
 #+end_src
 
 ** Help
@@ -1586,7 +1614,12 @@ Make help buffers active when created, so pressing "q" will immediately close th
 Helpful gives better contextual information in help buffers.
 
 #+begin_src emacs-lisp
-  (use-package helpful)
+  (use-package helpful
+:bind
+(("C-h v" . #'helpful-variable)
+("C-h k" . #'helpful-key)
+("C-h x" . #'helpful-command)
+))
 #+end_src
 
 * Editing
@@ -1706,6 +1739,7 @@ Accent allows easy insertion of accented characters. Place the mark on the chara
 
 #+begin_src emacs-lisp
   (use-package aggressive-indent
+    :defer 5
     :config
     (global-aggressive-indent-mode 1))
 #+end_src
@@ -1739,26 +1773,29 @@ Accent allows easy insertion of accented characters. Place the mark on the chara
 
 #+begin_src emacs-lisp
   (use-package hungry-delete
+    :defer 5
     :config
     (global-hungry-delete-mode))
-#+end_src
+    #+end_src
 
 ** Magit
 
 #+begin_src emacs-lisp
-  (use-package transient)
-  (use-package hl-todo)
+  ;; (use-package transient)
+  (use-package hl-todo
+    :after magit)
 #+end_src
 
 #+begin_src emacs-lisp
   (use-package magit
+    :defer 5
     :init
     (require 'transient)
     :custom
     (magit-diff-refine-hunk 'all)
     :config
     (transient-bind-q-to-quit))
-    #+end_src
+#+end_src
 
 ** Jinx
 
@@ -1782,15 +1819,17 @@ Display suggestions in grid.
 
 #+begin_src emacs-lisp :tangle no
   (add-hook 'emacs-startup-hook
-   (add-to-list 'vertico-multiform-categories
-		'(jinx grid (vertico-grid-annotate . 20))))
+	(add-to-list 'vertico-multiform-categories
+		   '(jinx grid (vertico-grid-annotate . 20))))
 #+end_src
 
 ** OSX Dictionary
 
 #+begin_src emacs-lisp
-  (use-package osx-dictionary)
-#+end_src
+  (use-package osx-dictionary
+    :bind
+    (("C-c d o" . #'osx-dictionary-search-pointer)))
+    #+end_src
 
 ** Selected
 
@@ -1850,8 +1889,9 @@ Display suggestions in grid.
 
 #+begin_src emacs-lisp
   (use-package speedrect
+    :defer 5
     :config (speedrect-mode))
-#+end_src
+    #+end_src
 
 ** Super Save
 
@@ -1859,6 +1899,7 @@ Display suggestions in grid.
 
 #+begin_src emacs-lisp
   (use-package super-save
+    :defer 1
     :config
     (setq super-save-auto-save-when-idle t
 	  auto-save-default nil
@@ -1867,12 +1908,13 @@ Display suggestions in grid.
     ;; save on find-file
     (add-to-list 'super-save-hook-triggers 'find-file-hook)
     (super-save-mode +1))
-#+end_src
+    #+end_src
 
 ** Titlecase
 
 #+begin_src emacs-lisp
   (use-package titlecase
+    :commands (titlecase-dwim)
     :config
     (setq titlecase-style "chicago"))
 #+end_src
@@ -1890,7 +1932,8 @@ Display suggestions in grid.
 ** Unfill
 
 #+begin_src emacs-lisp
-  (use-package unfill)
+  (use-package unfill
+:commands (unfill-paragraph unfill-region))
 #+end_src
 
 ** Editing Keybindings
@@ -2109,7 +2152,6 @@ Use ~org-auto-tangle~ to generate ~early-init.el~ and ~init.el~ whenever ~README
 
 #+begin_src emacs-lisp
   (use-package org-auto-tangle
-    :ensure
     :hook (org-mode . org-auto-tangle-mode))
 #+end_src
 
@@ -2280,7 +2322,7 @@ Open links with the return key.
 
 Use space key to show link hints.
 
-#+begin_src emacs-lisp :tangle no
+#+begin_src emacs-lisp
   (define-key org-agenda-mode-map (kbd "<SPC>") #'link-hint-open-link)
 #+end_src
 
@@ -2458,13 +2500,15 @@ I'm not sure what this doing anymore, so I'm going to disable it for now.
 ** Org Mac Link
 
 #+begin_src emacs-lisp
-  (use-package org-mac-link)
+  (use-package org-mac-link
+    :commands (org-mac-link-safari-insert-frontmost-url))
 #+end_src
 
 ** Org Web Tools
 
 #+begin_src emacs-lisp
-  (use-package org-web-tools)
+  (use-package org-web-tools
+  :commands (org-web-tools-read-url-as-org))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -2986,8 +3030,8 @@ Need to fix. See [[https://github.com/oantolin/math-delimiters][Math Delimiters]
 #+begin_src emacs-lisp :tangle no
   (use-package math-delimiters
     :ensure
-:vc (:url "https://github.com/oantolin/math-delimiters"
-:branch "master")
+    :vc (:url "https://github.com/oantolin/math-delimiters"
+	  :branch "master")
     :after (:any org latex)
     :commands (math-delimiters-no-dollars math-delimiters-mode)
     :hook ((LaTeX-mode . math-delimiters-mode)
@@ -3042,7 +3086,8 @@ From [[http://yummymelon.com/devnull/converting-a-markdown-region-to-org-revisit
 I don't need to use Pandoc much since everything stays in Org. It might come in handy for an occasional conversion from Markdown.
 
 #+begin_src emacs-lisp
-  (use-package pandoc-mode)
+  (use-package pandoc-mode
+    :defer 10)
 #+end_src
 
 * Citations
@@ -3084,6 +3129,7 @@ I don't need to use Pandoc much since everything stays in Org. It might come in 
 
 #+begin_src emacs-lisp
   (use-package denote
+:commands (denote)
     :config
     (setq denote-directory "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/Documents/notes/denote/")
     (setq denote-infer-keywords t)
@@ -3096,7 +3142,7 @@ I don't need to use Pandoc much since everything stays in Org. It might come in 
   (use-package consult-denote
     :bind
     (("C-c n f" .  #'consult-denote-find)
-    ("C-c n g"  . #'consult-denote-grep))
+     ("C-c n g"  . #'consult-denote-grep))
     :config
     (consult-denote-mode 1))
 #+end_src
@@ -3146,6 +3192,7 @@ Using journelly now.
 
 #+begin_src emacs-lisp
   (use-package consult-notes
+:commands (consult-notes)
     :config
     (consult-notes-denote-mode))
 #+end_src
@@ -3184,6 +3231,7 @@ Search notes with the xapian syntax (+word -word AND NOT etc), <tab> to preview,
 
 #+begin_src emacs-lisp
   (use-package denote-search
+    :commands (denote-search)
     :custom
     ;; Disable help string (set it once you learn the commands)
     ;; (denote-search-help-string "")
@@ -3369,8 +3417,9 @@ Embed YouTube videos, from [[https://endlessparentheses.com/embedding-youtube-vi
 This builds the RSS feed for the blog.
 
 #+begin_src emacs-lisp
-  (use-package webfeeder)
-#+end_src
+  (use-package webfeeder
+    :defer 10)
+  #+end_src
 
 *** Blog Tags
 
@@ -3444,21 +3493,22 @@ Select tag, add tag to to post, then add post to tag page.
 
 #+begin_src emacs-lisp
   (use-package website2org
-:vc (:url "https://github.com/rtrppl/website2org"
-:branch "main")
+    :vc (:url "https://github.com/rtrppl/website2org"
+	  :branch "main")
     :config
     (setq website2org-directory "~/icloud/web-saves/website2org/") ;; if needed, see below
     (setq website2org-additional-meta nil)
     :bind
     (:map global-map
-    ("C-M-s-<down>" . website2org)
-    ("C-M-s-<up>" . website2org-temp)))
+	  ("C-M-s-<down>" . website2org)
+	  ("C-M-s-<up>" . website2org-temp)))
 #+end_src
 
 ** Htmlize
 
 #+begin_src emacs-lisp
-  (use-package htmlize)
+  (use-package htmlize
+    :defer 10)
 #+end_src
 
 ** Emmet
@@ -3467,96 +3517,96 @@ Select tag, add tag to to post, then add post to tag page.
   (use-package emmet-mode
     :bind
     (:map html-mode-map
-	      ("C-M-S-s-<right>" . #'emmet-next-edit-point)
-	      ("C-M-S-s-<left>" . #'emmet-prev-edit-point)))
+	  ("C-M-S-s-<right>" . #'emmet-next-edit-point)
+	  ("C-M-S-s-<left>" . #'emmet-prev-edit-point)))
 #+end_src
 
 ** EWW
 
 #+begin_src emacs-lisp
-    (defun rlr/open-eww-link-new-buffer ()
-      (interactive)
-      (link-hint-copy-link)
-      (tab-new)
-      (setq new-buffer-url (current-kill 0 t))
-      (switch-to-buffer (generate-new-buffer "*eww*"))
-      (eww-mode)
-      (eww new-buffer-url))
+  (defun rlr/open-eww-link-new-buffer ()
+    (interactive)
+    (link-hint-copy-link)
+    (tab-new)
+    (setq new-buffer-url (current-kill 0 t))
+    (switch-to-buffer (generate-new-buffer "*eww*"))
+    (eww-mode)
+    (eww new-buffer-url))
 
-    (defun rlr/eww-toggle-images ()
-      "Toggle whether images are loaded and reload the current page from cache."
-      (interactive)
-      (setq-local shr-inhibit-images (not shr-inhibit-images))
-      (eww-reload t)
-      (message "Images are now %s"
-	       (if shr-inhibit-images "off" "on")))
+  (defun rlr/eww-toggle-images ()
+    "Toggle whether images are loaded and reload the current page from cache."
+    (interactive)
+    (setq-local shr-inhibit-images (not shr-inhibit-images))
+    (eww-reload t)
+    (message "Images are now %s"
+	     (if shr-inhibit-images "off" "on")))
 
-    (setq-default shr-inhibit-images t)   ; toggle with `I`
-    (setq-default shr-use-fonts t)      ; toggle with `F`
-    
-(defun rrnet ()
-      (interactive)
-      (eww-browse-url "randyridenour.net")
-      )
-    
-(defun sep ()
-      (interactive)
-      (eww-browse-url "plato.stanford.edu")
-      )
+  (setq-default shr-inhibit-images t)   ; toggle with `I`
+  (setq-default shr-use-fonts t)      ; toggle with `F`
 
-(define-key eww-mode-map (kbd "I") #'rlr/eww-toggle-images)
-(define-key eww-mode-map (kbd "f") #'link-hint-open-link)
-(define-key eww-mode-map (kbd "F") #'rlr/open-eww-link-new-buffer)
-(define-key eww-mode-map (kbd "T") #'eww-toggle-fonts)
-(define-key eww-link-keymap (kbd "I") #'rlr/eww-toggle-images)
+  (defun rrnet ()
+    (interactive)
+    (eww-browse-url "randyridenour.net")
+    )
+
+  (defun sep ()
+    (interactive)
+    (eww-browse-url "plato.stanford.edu")
+    )
+
+  (define-key eww-mode-map (kbd "I") #'rlr/eww-toggle-images)
+  (define-key eww-mode-map (kbd "f") #'link-hint-open-link)
+  (define-key eww-mode-map (kbd "F") #'rlr/open-eww-link-new-buffer)
+  (define-key eww-mode-map (kbd "T") #'eww-toggle-fonts)
+  (define-key eww-link-keymap (kbd "I") #'rlr/eww-toggle-images)
 
 #+end_src
 
 Might need to use an after emacs hook.
 
 #+begin_src emacs-lisp
-   (defun jao-eww-to-org (&optional dest)
-     "Render the current eww buffer using org markup.
-    If DEST, a buffer, is provided, insert the markup there."
-     (interactive)
-     (unless (org-region-active-p)
-       (let ((shr-width 80)) (eww-readable)))
-     (let* ((start (if (org-region-active-p) (region-beginning) (point-min)))
-	    (end (if (org-region-active-p) (region-end) (point-max)))
-	    (buff (or dest (generate-new-buffer "*eww-to-org*")))
-	    (link (eww-current-url))
-	    (title (or (plist-get eww-data :title) "")))
-       (with-current-buffer buff
-	 (insert "#+title: " title "\n#+link: " link "\n\n")
-	 (org-mode))
-       (save-excursion
-	 (goto-char start)
-	 (while (< (point) end)
-	   (let* ((p (point))
-		  (props (text-properties-at p))
-		  (k (seq-find (lambda (x) (plist-get props x))
-			       '(shr-url image-url outline-level face)))
-		  (prop (and k (list k (plist-get props k))))
-		  (next (if prop
-			    (next-single-property-change p (car prop) nil end)
-			  (next-property-change p nil end)))
-		  (txt (buffer-substring (point) next))
-		  (txt (replace-regexp-in-string "\\*" "·" txt)))
-	     (with-current-buffer buff
-	       (insert
-		(pcase prop
-		  ((and (or `(shr-url ,url) `(image-url ,url))
-			(guard (string-match-p "^http" url)))
-		   (let ((tt (replace-regexp-in-string "\n\\([^$]\\)" " \\1" txt)))
-		     (org-link-make-string url tt)))
-		  (`(outline-level ,n)
-		   (concat (make-string (- (* 2 n) 1) ?*) " " txt "\n"))
-		  ('(face italic) (format "/%s/ " (string-trim txt)))
-		  ('(face bold) (format "*%s* " (string-trim txt)))
-		  (_ txt))))
-	     (goto-char next))))
-       (pop-to-buffer buff)
-       (goto-char (point-min))))
+  (defun jao-eww-to-org (&optional dest)
+    "Render the current eww buffer using org markup.
+   If DEST, a buffer, is provided, insert the markup there."
+    (interactive)
+    (unless (org-region-active-p)
+      (let ((shr-width 80)) (eww-readable)))
+    (let* ((start (if (org-region-active-p) (region-beginning) (point-min)))
+	   (end (if (org-region-active-p) (region-end) (point-max)))
+	   (buff (or dest (generate-new-buffer "*eww-to-org*")))
+	   (link (eww-current-url))
+	   (title (or (plist-get eww-data :title) "")))
+      (with-current-buffer buff
+	(insert "#+title: " title "\n#+link: " link "\n\n")
+	(org-mode))
+      (save-excursion
+	(goto-char start)
+	(while (< (point) end)
+	  (let* ((p (point))
+		 (props (text-properties-at p))
+		 (k (seq-find (lambda (x) (plist-get props x))
+			      '(shr-url image-url outline-level face)))
+		 (prop (and k (list k (plist-get props k))))
+		 (next (if prop
+			   (next-single-property-change p (car prop) nil end)
+			 (next-property-change p nil end)))
+		 (txt (buffer-substring (point) next))
+		 (txt (replace-regexp-in-string "\\*" "·" txt)))
+	    (with-current-buffer buff
+	      (insert
+	       (pcase prop
+		 ((and (or `(shr-url ,url) `(image-url ,url))
+		       (guard (string-match-p "^http" url)))
+		  (let ((tt (replace-regexp-in-string "\n\\([^$]\\)" " \\1" txt)))
+		    (org-link-make-string url tt)))
+		 (`(outline-level ,n)
+		  (concat (make-string (- (* 2 n) 1) ?*) " " txt "\n"))
+		 ('(face italic) (format "/%s/ " (string-trim txt)))
+		 ('(face bold) (format "*%s* " (string-trim txt)))
+		 (_ txt))))
+	    (goto-char next))))
+      (pop-to-buffer buff)
+      (goto-char (point-min))))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -3577,6 +3627,7 @@ Shorten URL's with the is.gd service.
 
 #+begin_src emacs-lisp
   (use-package isgd
+    :commands (isgd-copy-url-at-point isgd-replace-url-at-point)
     :custom
     (isgd-logstats nil)
     (isgd-ask-custom-url t))
@@ -3597,19 +3648,20 @@ Shorten URL's with the is.gd service.
 ** Fish
 
 #+begin_src emacs-lisp
-  (use-package fish-mode)
+  (use-package fish-mode
+:mode ("\\.fish\\'" . Fish-mode))
 #+end_src
 
 *** Emacs Fish Completion
 
 #+begin_src emacs-lisp
   (use-package fish-completion
-    :ensure 
-:vc (:url "https://github.com/LemonBreezes/emacs-fish-completion"
-:branch "master")
+    :defer 10
+    :vc (:url "https://github.com/LemonBreezes/emacs-fish-completion"
+	  :branch "master")
     :config
     (when (and (executable-find "fish")
-	       (require 'fish-completion nil t))
+	   (require 'fish-completion nil t))
       (global-fish-completion-mode)))
 #+end_src
 
@@ -3618,13 +3670,17 @@ Shorten URL's with the is.gd service.
 SLY is Sylvester the Cat's Common Lisp IDE for Emacs.
 
 #+begin_src emacs-lisp
-  (use-package sly)
+  (use-package sly
+    :commands (sly)
+    :config
+    (setq inferior-lisp-program "/opt/homebrew/bin/sbcl"))
 #+end_src
 
 ** YAML
 
 #+begin_src emacs-lisp
-  (use-package yaml-mode)
+  (use-package yaml-mode
+:mode ("\\.yml\\'" . YAML-mode))
 #+end_src
 
 * Mail and News
@@ -3741,6 +3797,7 @@ SLY is Sylvester the Cat's Common Lisp IDE for Emacs.
 
 #+begin_src emacs-lisp
   (use-package org-mime
+    :after mu4e
     :commands (org-mime-edit-mail-in-org-mode)
     :config
     (setq org-mime-export-options '(:section-numbers nil
@@ -3762,6 +3819,7 @@ Mu4e-alert
 
 #+begin_src emacs-lisp
   (use-package mu4e-alert
+    :after mu4e
     :config
     (mu4e-alert-enable-mode-line-display))
 #+end_src
@@ -3833,8 +3891,8 @@ Open mu4e and elfeed in new frame.
     (mu4e-update-mail-and-index 1)
     )
 
-   (global-set-key (kbd "C-M-s-r") #'rlr/read-mail-news)
-   (global-set-key (kbd "H-m") #'mu4e-transient-menu)
+  (global-set-key (kbd "C-M-s-r") #'rlr/read-mail-news)
+  (global-set-key (kbd "H-m") #'mu4e-transient-menu)
 #+end_src
 
 *** Consult MU
@@ -3907,8 +3965,8 @@ Functions for setting default browser,
 	   (choice   (completing-read "Choose one: " choices)))
       (call-interactively (cdr (assoc choice choices)))))
 
-  
-   (global-set-key (kbd "C-M-S-s-b") #'rlr/select-browser)
+
+  (global-set-key (kbd "C-M-S-s-b") #'rlr/select-browser)
 #+end_src
 
 ** Elfeed
@@ -3920,10 +3978,10 @@ Functions for setting default browser,
     :config
     :bind
     (
-:map elfeed-search-mode-map
-	      ("q" . #'rlr/elfeed-save-db-and-quit)
-    :map elfeed-show-mode-map
-	      ("S-<SPC>" . #'scroll-down)))
+     :map elfeed-search-mode-map
+     ("q" . #'rlr/elfeed-save-db-and-quit)
+     :map elfeed-show-mode-map
+     ("S-<SPC>" . #'scroll-down)))
 #+end_src
 
 Functions for syncing the database between machines.
@@ -3966,11 +4024,11 @@ Tag items — from [[https://www.reddit.com/r/emacs/comments/go5d0v/using_emacs_
 	 (mapc #'elfeed-search-update-entry entries)
 	 (unless (use-region-p) (forward-line)))))
 
-(define-key elfeed-search-mode-map (kbd "l") (elfeed-tag-selection-as 'readlater))
-(define-key elfeed-search-mode-map (kbd "d") (elfeed-tag-selection-as 'junk))
-(define-key elfeed-search-mode-map (kbd "m") #'(elfeed-tag-selection-as 'starred))
-(define-key elfeed-search-mode-map (kbd "M") #'(lambda () (interactive) (elfeed-search-set-filter "@6-months-ago +starred")))
-(define-key elfeed-search-mode-map (kbd "L") #'(lambda () (interactive) (elfeed-search-set-filter "+readlater")))
+  (define-key elfeed-search-mode-map (kbd "l") (elfeed-tag-selection-as 'readlater))
+  (define-key elfeed-search-mode-map (kbd "d") (elfeed-tag-selection-as 'junk))
+  (define-key elfeed-search-mode-map (kbd "m") (elfeed-tag-selection-as 'starred))
+  (define-key elfeed-search-mode-map (kbd "M") #'(lambda () (interactive) (elfeed-search-set-filter "@6-months-ago +starred")))
+  (define-key elfeed-search-mode-map (kbd "L") #'(lambda () (interactive) (elfeed-search-set-filter "+readlater")))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -4021,7 +4079,7 @@ Open Mastodon in a new tab
     (setq-default pdf-view-display-size 'fit-width)
     :bind
     (:map pdf-view-mode-map
-	      ("C-s" . #'isearch-forward)))
+	  ("C-s" . #'isearch-forward)))
 #+end_src
 
 * Music
@@ -4031,7 +4089,9 @@ Open Mastodon in a new tab
 Make chord charts.
 
 #+begin_src emacs-lisp
-  (use-package chordpro-mode)
+  (use-package chordpro-mode
+:mode ("\\.cho\\'" . chordpro-mode)
+)
 #+end_src
 
 * Keybindings
@@ -4039,514 +4099,516 @@ Make chord charts.
 ** Hydras
 
 #+begin_src emacs-lisp
-   (pretty-hydra-define hydra-toggle
-     (:color teal :quit-key "q" :title "Toggle")
-     (" "
-      (("a" abbrev-mode "abbrev" :toggle t)
-       ("b" toggle-debug-on-error "debug" (default value 'debug-on-error))
-       ("d" global-devil-mode "devil" :toggle t)
-       ("e" evil-mode "evil" :toggle t)
-       ("i" aggressive-indent-mode "indent" :toggle t)
-       ("f" auto-fill-mode "fill" :toggle t)
-       ("l" display-line-numbers-mode "linum" :toggle t)
-       ("m" variable-pitch-mode "variable-pitch" :toggle t)
-       ("p" electric-pair-mode "electric-pair" :toggle t)
-       ("t" toggle-truncate-lines "truncate" :toggle t)
-       ("s" whitespace-mode "whitespace" :toggle t))
-      " "
-      (("c" cdlatex-mode "cdlatex" :toggle t)
-       ("o" olivetti-mode "olivetti" :toggle t)
-       ("r" read-only-mode "read-only" :toggle t)
-       ("v" view-mode "view" :toggle t)
-       ("W" wc-mode "word-count" :toggle t)
-       ("S" auto-save-visited-mode "auto-save" :toggle t)
-       ("C" cua-selection-mode "rectangle" :toggle t))))
+  (pretty-hydra-define hydra-toggle
+    (:color teal :quit-key "q" :title "Toggle")
+    (" "
+     (("a" abbrev-mode "abbrev" :toggle t)
+      ("b" toggle-debug-on-error "debug" (default value 'debug-on-error))
+      ("d" global-devil-mode "devil" :toggle t)
+      ("e" evil-mode "evil" :toggle t)
+      ("i" aggressive-indent-mode "indent" :toggle t)
+      ("f" auto-fill-mode "fill" :toggle t)
+      ("l" display-line-numbers-mode "linum" :toggle t)
+      ("m" variable-pitch-mode "variable-pitch" :toggle t)
+      ("p" electric-pair-mode "electric-pair" :toggle t)
+      ("t" toggle-truncate-lines "truncate" :toggle t)
+      ("s" whitespace-mode "whitespace" :toggle t))
+     " "
+     (("c" cdlatex-mode "cdlatex" :toggle t)
+      ("o" olivetti-mode "olivetti" :toggle t)
+      ("r" read-only-mode "read-only" :toggle t)
+      ("v" view-mode "view" :toggle t)
+      ("W" wc-mode "word-count" :toggle t)
+      ("S" auto-save-visited-mode "auto-save" :toggle t)
+      ("C" cua-selection-mode "rectangle" :toggle t))))
 #+end_src
 
 #+begin_src emacs-lisp
-   (pretty-hydra-define hydra-buffer
-     (:color teal :quit-key "q" :title "Buffers and Files")
-     ("Open"
-      (("b" ibuffer "ibuffer")
-       ("m" consult-bookmark "bookmark")
-       ("w" consult-buffer-other-window "other window")
-       ("f" consult-buffer-other-frame "other frame")
-       ("d" crux-recentf-find-directory "recent directory")
-       ("a" crux-open-with "open in default app"))
-      "Actions"
-      (("D" crux-delete-file-and-buffer "delete file")
-       ("R" crux-rename-file-and-buffer "rename file")
-       ("K" rlr/kill-other-buffers "kill other buffers")
-       ("N" nuke-all-buffers "Kill all buffers")
-       ("c" crux-cleanup-buffer-or-region "fix indentation"))
-      "Misc"
-      (("t" crux-visit-term-buffer "ansi-term")
-       ("T" iterm-goto-filedir-or-home "iTerm2")
-       ("i" crux-find-user-init-file "init.el")
-       ("s" crux-find-shell-init-file "fish config"))
-      ))
+  (pretty-hydra-define hydra-buffer
+    (:color teal :quit-key "q" :title "Buffers and Files")
+    ("Open"
+     (("b" ibuffer "ibuffer")
+      ("m" consult-bookmark "bookmark")
+      ("w" consult-buffer-other-window "other window")
+      ("f" consult-buffer-other-frame "other frame")
+      ("d" crux-recentf-find-directory "recent directory")
+      ("a" crux-open-with "open in default app"))
+     "Actions"
+     (("D" crux-delete-file-and-buffer "delete file")
+      ("R" crux-rename-file-and-buffer "rename file")
+      ("K" rlr/kill-other-buffers "kill other buffers")
+      ("N" nuke-all-buffers "Kill all buffers")
+      ("c" crux-cleanup-buffer-or-region "fix indentation"))
+     "Misc"
+     (("t" crux-visit-term-buffer "ansi-term")
+      ("T" iterm-goto-filedir-or-home "iTerm2")
+      ("i" crux-find-user-init-file "init.el")
+      ("s" crux-find-shell-init-file "fish config"))
+     ))
 #+end_src
 
 #+begin_src emacs-lisp
-   (pretty-hydra-define hydra-locate
-     (:color teal :quit-key "q" title: "Search")
-     ("Buffer"
-      (("c" pulsar-highlight-dwim "find cursor")
-       ("h" consult-org-heading "org heading")
-       ("l" consult-goto-line "goto-line")
-       ("i" consult-imenu "imenu")
-       ("m" consult-mark "mark")
-       ("o" consult-outline "outline"))
-      "Global"
-      (("M" consult-global-mark "global-mark")
-       ("n" consult-notes "notes")
-       ("r" consult-ripgrep "ripgrep")
-       ("d" rlr/consult-rg "rg from dir")
-       ("f" rlr/consult-fd "find from dir"))
-      "Files"
-      (("e" rr/open-init-file "Emacs init")
-       ("s" goto-shell-init "Fish functions"))
-      ))
+  (pretty-hydra-define hydra-locate
+    (:color teal :quit-key "q" title: "Search")
+    ("Buffer"
+     (("c" pulsar-highlight-dwim "find cursor")
+      ("h" consult-org-heading "org heading")
+      ("l" consult-goto-line "goto-line")
+      ("i" consult-imenu "imenu")
+      ("m" consult-mark "mark")
+      ("o" consult-outline "outline"))
+     "Global"
+     (("M" consult-global-mark "global-mark")
+      ("n" consult-notes "notes")
+      ("r" consult-ripgrep "ripgrep")
+      ("d" rlr/consult-rg "rg from dir")
+      ("f" rlr/consult-fd "find from dir"))
+     "Files"
+     (("e" rr/open-init-file "Emacs init")
+      ("s" goto-shell-init "Fish functions"))
+     ))
 #+end_src
 
 #+begin_src emacs-lisp
-   (pretty-hydra-define hydra-window
-     (:color teal :quit-key "q" title: "Windows")
-     ("Windows"
-      (("w" other-window "cycle windows" :exit nil)
-       ("a" ace-window "ace window")
-       ("m" minimize-window "minimize window")
-       ("s" crux-transpose-windows "swap windows")
-       ("S" shrink-window-if-larger-than-buffer "shrink to fit")
-       ("b" balance-windows "balance windows")
-       ("t" toggle-window-split "toggle split")
-       ("T" enlarge-window" grow taller" :exit nil)
-       ("G" enlarge-window-horizontally "grow wider" :exit nil)
-       ("o" delete-other-windows "kill other windows"))
-      "Frames"
-      (("M" iconify-frame "minimize frame")
-       ("d" delete-other-frames "delete other frames")
-       ("D" delete-frame "delete this frame")
-       ("i" make-frame-invisible "invisible frame")
-       ("f" toggle-frame-fullscreen "fullscreen")
-       ("n" make-frame-command "new frame"))
-      "Writeroom"
-      (("W" writeroom-mode "toggle writeroom")
-       ("M" writeroom-toggle-mode-line "toggle modeline"))))
+  (pretty-hydra-define hydra-window
+    (:color teal :quit-key "q" title: "Windows")
+    ("Windows"
+     (("w" other-window "cycle windows" :exit nil)
+      ("a" ace-window "ace window")
+      ("m" minimize-window "minimize window")
+      ("s" crux-transpose-windows "swap windows")
+      ("S" shrink-window-if-larger-than-buffer "shrink to fit")
+      ("b" balance-windows "balance windows")
+      ("t" toggle-window-split "toggle split")
+      ("T" enlarge-window" grow taller" :exit nil)
+      ("G" enlarge-window-horizontally "grow wider" :exit nil)
+      ("o" delete-other-windows "kill other windows"))
+     "Frames"
+     (("M" iconify-frame "minimize frame")
+      ("d" delete-other-frames "delete other frames")
+      ("D" delete-frame "delete this frame")
+      ("i" make-frame-invisible "invisible frame")
+      ("f" toggle-frame-fullscreen "fullscreen")
+      ("n" make-frame-command "new frame"))
+     "Writeroom"
+     (("W" writeroom-mode "toggle writeroom")
+      ("M" writeroom-toggle-mode-line "toggle modeline"))))
 #+end_src
 
 #+begin_src emacs-lisp
-     (pretty-hydra-define hydra-new
-     (:color teal :quit-key "q" title: "New")
-     ("Frame"
-      (("f" make-frame-command "new frame"))
-      "Denote"
-      (("c" org-capture "capture")
-       ("n" denote "note")
-       ("v" denote-menu-list-notes "view notes")
-       ("j" denote-journal-extras-new-or-existing-entry "journal"))
-      "Writing"
-      (("b" rlrt-new-post "blog post")
-       ("a" rlrt-new-article "article"))
-      "Teaching"
-      (("l" rlrt-new-lecture "lecture")
-       ("h" rlrt-new-handout "handout")
-       ("s" rlrt-new-syllabus "syllabus"))
-      ))
+  (pretty-hydra-define hydra-new
+    (:color teal :quit-key "q" title: "New")
+    ("Frame"
+     (("f" make-frame-command "new frame"))
+     "Denote"
+     (("c" org-capture "capture")
+      ("n" denote "note")
+      ("v" denote-menu-list-notes "view notes")
+      ("j" denote-journal-extras-new-or-existing-entry "journal"))
+     "Writing"
+     (("b" rlrt-new-post "blog post")
+      ("a" rlrt-new-article "article"))
+     "Teaching"
+     (("l" rlrt-new-lecture "lecture")
+      ("h" rlrt-new-handout "handout")
+      ("s" rlrt-new-syllabus "syllabus"))
+     ))
 #+end_src
 
 #+begin_src emacs-lisp
-   (pretty-hydra-define hydra-logic
-     (:color pink :quit-key "0" :title "Logic")
-     ("Operators"
-      (
-       ;; ("1" (rr/insert-unicode "NOT SIGN") "¬")
-       ("1" (rr/insert-unicode "TILDE OPERATOR") "∼")
-       ;; ("2" (rr/insert-unicode "AMPERSAND") "&")
-       ("2" (rr/insert-unicode "BULLET") "•")
-       ("3" (rr/insert-unicode "LOGICAL OR") "v")
-       ("4" (rr/insert-unicode "SUPERSET OF") "⊃")
-       ;; ("4" (rr/insert-unicode "RIGHTWARDS ARROW") "→")
-       ("5" (rr/insert-unicode "IDENTICAL TO") "≡")
-       ;; ("5" (rr/insert-unicode "LEFT RIGHT ARROW") "↔")
-       ("6" (rr/insert-unicode "THERE EXISTS") "∃")
-       ("7" (rr/insert-unicode "FOR ALL") "∀")
-       ("8" (rr/insert-unicode "WHITE MEDIUM SQUARE") "□")
-       ("9" (rr/insert-unicode "LOZENGE") "◊")
-       ("`" (rr/insert-unicode "NOT EQUAL TO") "≠"))
-      "Space"
-      (("?" (rr/insert-unicode "MEDIUM MATHEMATICAL SPACE") "Narrow space"))
-      "Quit"
-      (("0" quit-window "quit" :color blue))
-      ))
+  (pretty-hydra-define hydra-logic
+    (:color pink :quit-key "0" :title "Logic")
+    ("Operators"
+     (
+      ;; ("1" (rr/insert-unicode "NOT SIGN") "¬")
+      ("1" (rr/insert-unicode "TILDE OPERATOR") "∼")
+      ;; ("2" (rr/insert-unicode "AMPERSAND") "&")
+      ("2" (rr/insert-unicode "BULLET") "•")
+      ("3" (rr/insert-unicode "LOGICAL OR") "v")
+      ("4" (rr/insert-unicode "SUPERSET OF") "⊃")
+      ;; ("4" (rr/insert-unicode "RIGHTWARDS ARROW") "→")
+      ("5" (rr/insert-unicode "IDENTICAL TO") "≡")
+      ;; ("5" (rr/insert-unicode "LEFT RIGHT ARROW") "↔")
+      ("6" (rr/insert-unicode "THERE EXISTS") "∃")
+      ("7" (rr/insert-unicode "FOR ALL") "∀")
+      ("8" (rr/insert-unicode "WHITE MEDIUM SQUARE") "□")
+      ("9" (rr/insert-unicode "LOZENGE") "◊")
+      ("`" (rr/insert-unicode "NOT EQUAL TO") "≠"))
+     "Space"
+     (("?" (rr/insert-unicode "MEDIUM MATHEMATICAL SPACE") "Narrow space"))
+     "Quit"
+     (("0" quit-window "quit" :color blue))
+     ))
 #+end_src
 
 #+begin_src emacs-lisp
-   (pretty-hydra-define hydra-math
-     (:color pink :quit-key "?" :title "Math")
-     ("Operators"
-      (("1" (rr/insert-unicode "NOT SIGN") "¬")
-       ("2" (rr/insert-unicode "AMPERSAND") "&")
-       ("3" (rr/insert-unicode "LOGICAL OR") "v")
-       ("4" (rr/insert-unicode "RIGHTWARDS ARROW") "→")
-       ("5" (rr/insert-unicode "LEFT RIGHT ARROW") "↔")
-       ("6" (rr/insert-unicode "THERE EXISTS") "∃")
-       ("7" (rr/insert-unicode "FOR ALL") "∀")
-       ("8" (rr/insert-unicode "WHITE MEDIUM SQUARE") "□")
-       ("9" (rr/insert-unicode "LOZENGE") "◊"))
-      "Sets"
-      (("R" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL R") "ℝ real")
-       ("N" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL N") "ℕ natural")
-       ("Z" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL Z") "ℤ integer")
-       ("Q" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL Q") "ℚ rational")
-       ("Q" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL Q") "ℚ rational")
-       ("Q" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL Q") "ℚ rational")
-       )
-      "Space"
-      (("?" (rr/insert-unicode "MEDIUM MATHEMATICAL SPACE") "Narrow space"))
-      "Quit"
-      (("?" quit-window "quit" :color blue))
-      ))
+  (pretty-hydra-define hydra-math
+    (:color pink :quit-key "?" :title "Math")
+    ("Operators"
+     (("1" (rr/insert-unicode "NOT SIGN") "¬")
+      ("2" (rr/insert-unicode "AMPERSAND") "&")
+      ("3" (rr/insert-unicode "LOGICAL OR") "v")
+      ("4" (rr/insert-unicode "RIGHTWARDS ARROW") "→")
+      ("5" (rr/insert-unicode "LEFT RIGHT ARROW") "↔")
+      ("6" (rr/insert-unicode "THERE EXISTS") "∃")
+      ("7" (rr/insert-unicode "FOR ALL") "∀")
+      ("8" (rr/insert-unicode "WHITE MEDIUM SQUARE") "□")
+      ("9" (rr/insert-unicode "LOZENGE") "◊"))
+     "Sets"
+     (("R" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL R") "ℝ real")
+      ("N" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL N") "ℕ natural")
+      ("Z" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL Z") "ℤ integer")
+      ("Q" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL Q") "ℚ rational")
+      ("Q" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL Q") "ℚ rational")
+      ("Q" (rr/insert-unicode "DOUBLE-STRUCK CAPITAL Q") "ℚ rational")
+      )
+     "Space"
+     (("?" (rr/insert-unicode "MEDIUM MATHEMATICAL SPACE") "Narrow space"))
+     "Quit"
+     (("?" quit-window "quit" :color blue))
+     ))
 #+end_src
 
 #+begin_src emacs-lisp
-   (pretty-hydra-define hydra-hydras
-     (:color teal :quit-key "q" :title "Hydras")
-     ("System"
-      (("t" hydra-toggle/body)
-       ("b" hydra-buffer/body)
-       ("h" hydra-hugo/body)
-       ("p" powerthesaurus-hydra/body))
-      "Unicode"
-      (("l" hydra-logic/body "logic")
-       ("m" hydra-math/body))))
+  (pretty-hydra-define hydra-hydras
+    (:color teal :quit-key "q" :title "Hydras")
+    ("System"
+     (("t" hydra-toggle/body)
+      ("b" hydra-buffer/body)
+      ("h" hydra-hugo/body)
+      ("p" powerthesaurus-hydra/body))
+     "Unicode"
+     (("l" hydra-logic/body "logic")
+      ("m" hydra-math/body))))
 #+end_src
 
 #+begin_src emacs-lisp
-(global-set-key (kbd "H-h") #'hydra-hydras/body)
-(global-set-key (kbd "s-l") #'hydra-locate/body)
-(global-set-key (kbd "s-n") #'hydra-new/body)
-(global-set-key (kbd "H-t") #'hydra-toggle/body)
-(global-set-key (kbd "H-w") #'hydra-window/body)
-(global-set-key (kbd "H-b") #'hydra-buffer/body)
-(global-set-key (kbd "C-x 9") #'hydra-logic/body)
+  (global-set-key (kbd "H-h") #'hydra-hydras/body)
+  (global-set-key (kbd "s-l") #'hydra-locate/body)
+  (global-set-key (kbd "s-n") #'hydra-new/body)
+  (global-set-key (kbd "H-t") #'hydra-toggle/body)
+  (global-set-key (kbd "H-w") #'hydra-window/body)
+  (global-set-key (kbd "H-b") #'hydra-buffer/body)
+  (global-set-key (kbd "C-x 9") #'hydra-logic/body)
 #+end_src
 
 ** Major-Mode Hydras
 
 #+begin_src emacs-lisp
-   (major-mode-hydra-define dashboard-mode
-     (:quit-key "q")
-     ("Open"
-      (("m" consult-bookmark "bookmarks")
-       ("a" consult-org-agenda "consult-agenda")
-       ("t" (find-file "/Users/rlridenour/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org/tasks.org") "open tasks")
-       ("b" (find-file "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/org/bookmarks.org") "web bookmarks"))))
+  (major-mode-hydra-define dashboard-mode
+    (:quit-key "q")
+    ("Open"
+     (("m" consult-bookmark "bookmarks")
+      ("a" consult-org-agenda "consult-agenda")
+      ("t" (find-file "/Users/rlridenour/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org/tasks.org") "open tasks")
+      ("b" (find-file "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/org/bookmarks.org") "web bookmarks"))))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define org-agenda-mode
-     (:quit-key "q")
-     ("Open"
-      (
-       ("a" consult-org-agenda "consult-agenda")
-       ("b" consult-bookmark "bookmarks")
-       ("m" mu4e "rlr/read-mail-news")
-       ("t" (find-file "/Users/rlridenour/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org/tasks.org") "open tasks")
-       ("w" (find-file "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/org/bookmarks.org") "web bookmarks"))
-      "Classes"
-      (("1" (dired "~/icloud/teaching/intro/lectures") "Intro")
-       ("2" (dired "~/icloud/teaching/medieval/lectures") "Medieval")
-       ("3" (dired "~/icloud/teaching/logic/lectures") "Logic")
-       ("4" (dired "~/icloud/teaching/language/lectures") "Language")
-       )
-      "Actions"
-      (("s" rlr/save-web-page-as-org-file "Save Safari page as Org")
-       ("e" rlr/open-safari-page-in-eww "Open Safari page in EWW"))))
+  (major-mode-hydra-define org-agenda-mode
+    (:quit-key "q")
+    ("Open"
+     (
+      ("a" consult-org-agenda "consult-agenda")
+      ("b" consult-bookmark "bookmarks")
+      ("m" mu4e "rlr/read-mail-news")
+      ("t" (find-file "/Users/rlridenour/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org/tasks.org") "open tasks")
+      ("w" (find-file "/Users/rlridenour/Library/Mobile Documents/com~apple~CloudDocs/org/bookmarks.org") "web bookmarks"))
+     "Classes"
+     (("1" (dired "~/icloud/teaching/intro/lectures") "Intro")
+      ("2" (dired "~/icloud/teaching/medieval/lectures") "Medieval")
+      ("3" (dired "~/icloud/teaching/logic/lectures") "Logic")
+      ("4" (dired "~/icloud/teaching/language/lectures") "Language")
+      )
+     "Actions"
+     (("s" rlr/save-web-page-as-org-file "Save Safari page as Org")
+      ("e" rlr/open-safari-page-in-eww "Open Safari page in EWW"))))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define eww-mode
-     (:quit-key "q")
-     ("A"
-      (
-       ;; ("G" eww "Eww Open Browser")
-       ("g" eww-reload "Eww Reload")
-       ("6" eww-open-in-new-buffer "Open in new buffer")
-       ("l" eww-back-url "Back Url")
-       ("r" eww-forward-url "Forward Url")
-       ("N" eww-next-url "Next Url")
-       ("P" eww-previous-url "Previous Url")
-       ("u" eww-up-url "Up Url")
-       ("&" eww-browse-with-external-browser "Open in External Browser")
-       ("d" eww-download "Download")
-       ("w" eww-copy-page-url "Copy Url Page")
-       );end theme
-      "B"
-      (
-       ("T" rlr/eww-toggle-images "Toggle Image Display")
-       (">" shr-next-link "Shr Next Link")
-       ("<" shr-previous-link "Shr Previous Link")
-       ("n" scroll-down-command "Scroll Down")
-       ("C" url-cookie-list "Url Cookie List")
-       ("v" eww-view-source "View Source")
-       ("R" eww-readable "Make Readable")
-       ("H" eww-list-histories "List History")
-       ("E" eww-set-character-encoding "Character Encoding")
-       ("s" eww-switch-to-buffer "Switch to Buffer")
-       ("S" eww-list-buffers "List Buffers")
-       );end highlighting
+  (major-mode-hydra-define eww-mode
+    (:quit-key "q")
+    ("A"
+     (
+      ;; ("G" eww "Eww Open Browser")
+      ("g" eww-reload "Eww Reload")
+      ("6" eww-open-in-new-buffer "Open in new buffer")
+      ("l" eww-back-url "Back Url")
+      ("r" eww-forward-url "Forward Url")
+      ("N" eww-next-url "Next Url")
+      ("P" eww-previous-url "Previous Url")
+      ("u" eww-up-url "Up Url")
+      ("&" eww-browse-with-external-browser "Open in External Browser")
+      ("d" eww-download "Download")
+      ("w" eww-copy-page-url "Copy Url Page")
+      );end theme
+     "B"
+     (
+      ("T" rlr/eww-toggle-images "Toggle Image Display")
+      (">" shr-next-link "Shr Next Link")
+      ("<" shr-previous-link "Shr Previous Link")
+      ("n" scroll-down-command "Scroll Down")
+      ("C" url-cookie-list "Url Cookie List")
+      ("v" eww-view-source "View Source")
+      ("R" eww-readable "Make Readable")
+      ("H" eww-list-histories "List History")
+      ("E" eww-set-character-encoding "Character Encoding")
+      ("s" eww-switch-to-buffer "Switch to Buffer")
+      ("S" eww-list-buffers "List Buffers")
+      );end highlighting
 
-      "C"
-      (
-       ("1" rrnet "randyridenour.net")
-       ("2" sep "SEP")
-       ("F" eww-toggle-fonts "Toggle Fonts")
-       ("D" eww-toggle-paragraph-direction "Toggle Paragraph Direction")
-       ("c" eww-toggle-colors "Toggle Colors")
-       ("b" eww-add-bookmark "Add Bookmark")
-       ("B" eww-list-bookmarks "List Bookmarks")
-       ("=" eww-next-bookmark "Next Bookmark")
-       ("-" eww-previous-bookmark "Previous Bookmark")
-       ("O" jao-eww-to-org "Make Org Version")
-       ("<SPC>" nil "Quit" :color pink))))
+     "C"
+     (
+      ("1" rrnet "randyridenour.net")
+      ("2" sep "SEP")
+      ("F" eww-toggle-fonts "Toggle Fonts")
+      ("D" eww-toggle-paragraph-direction "Toggle Paragraph Direction")
+      ("c" eww-toggle-colors "Toggle Colors")
+      ("b" eww-add-bookmark "Add Bookmark")
+      ("B" eww-list-bookmarks "List Bookmarks")
+      ("=" eww-next-bookmark "Next Bookmark")
+      ("-" eww-previous-bookmark "Previous Bookmark")
+      ("O" jao-eww-to-org "Make Org Version")
+      ("<SPC>" nil "Quit" :color pink))))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define markdown-mode
-     (:quit-key "q")
-     ("Format"
-      (("h" markdown-insert-header-dwim "header")
-       ("l" markdown-insert-link "link")
-       ("u" markdown-insert-uri "url")
-       ("f" markdown-insert-footnote "footnote")
-       ("w" markdown-insert-wiki-link "wiki")
-       ("r" markdown-insert-reference-link-dwim "r-link")
-       ("n" markdown-cleanup-list-numbers "clean-lists")
-       ("c" markdown-complete-buffer "complete"))))
+  (major-mode-hydra-define markdown-mode
+    (:quit-key "q")
+    ("Format"
+     (("h" markdown-insert-header-dwim "header")
+      ("l" markdown-insert-link "link")
+      ("u" markdown-insert-uri "url")
+      ("f" markdown-insert-footnote "footnote")
+      ("w" markdown-insert-wiki-link "wiki")
+      ("r" markdown-insert-reference-link-dwim "r-link")
+      ("n" markdown-cleanup-list-numbers "clean-lists")
+      ("c" markdown-complete-buffer "complete"))))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define LaTeX-mode
-     (:quit-key "q")
-     ("Bibtex"
-      (("r" citar-insert-citation "citation"))
-      "LaTeXmk"
-      (("m" rlr/tex-mkpdf "PDFLaTeX")
-       ("l" rlr/tex-mklua "LuaLaTeX")
-       ("w" rlr/tex-mktc "watch PDFLaTeX")
-       ("L" rlr/tex-mklua "watch LuaLaTeX")
-       ("c" tex-clean "clean aux")
-       ("C" tex-clean-all "clean all")
-       ("n" latex-word-count "word count"))))
+  (major-mode-hydra-define LaTeX-mode
+    (:quit-key "q")
+    ("Bibtex"
+     (("r" citar-insert-citation "citation"))
+     "LaTeXmk"
+     (("m" rlr/tex-mkpdf "PDFLaTeX")
+      ("l" rlr/tex-mklua "LuaLaTeX")
+      ("w" rlr/tex-mktc "watch PDFLaTeX")
+      ("L" rlr/tex-mklua "watch LuaLaTeX")
+      ("c" tex-clean "clean aux")
+      ("C" tex-clean-all "clean all")
+      ("n" latex-word-count "word count"))))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define org-mode
-     (:quit-key "q")
-     ("Export"
-      (("m" rlr/org-mkpdf "Make PDF with PDFLaTeX")
-       ("p" rlr/org-open-pdf "View PDF")
-       ("h" make-html "HTML")
-       ("l" rlr/org-mklua "Make PDF with LuaLaTeX")
-       ("el" org-latex-export-to-latex "Org to LaTeX")
-       ("eb" org-beamer-export-to-pdf "Org to Beamer-PDF")
-       ("eB" org-beamer-export-to-latex "Org to Beamer-LaTeX")
-       ("s" lecture-slides "Lecture slides")
-       ("n" lecture-notes "Lecture notes")
-       ("ep" present "Present slides")
-       ("ec" canvas-copy "Copy HTML for Canvas")
-       ("es" canvas-notes "HTML Canvas notes")
-       ("eS" make-syllabus "Syllabus")
-       ("eh" make-handout "Handout")
-       ("c" tex-clean "clean aux")
-       ("C" tex-clean-all "clean all"))
-      "Edit"
-      (("a" org-appear-mode :toggle t)
-       ("dd" org-deadline "deadline")
-       ("ds" org-schedule "schedule")
-       ("r" org-refile "refile")
-       ("du" rlr/org-date "update date stamp")
-       ;; ("fn" org-footnote-new "insert footnote")
-       ("ff" org-footnote-action "edit footnote")
-       ("fc" citar-insert-citation "citation")
-       ("il" org-mac-link-safari-insert-frontmost-url "insert safari link")
-       ("y" yankpad-set-category "set yankpad"))
-      "View"
-      (("vi" consult-org-heading "iMenu")
-       ("vu" org-toggle-pretty-entities "org-pretty")
-       ("vI" org-toggle-inline-images "Inline images"))
-      "Blog"
-      (("bn" rlrt-new-post "New draft")
-       ("bt" orgblog-add-tag "Add tag")
-       ("bi" orgblog-insert-image "Insert image")
-       ("bp" orgblog-publish-draft "Publish draft")
-       ("bb" orgblog-build "Build site")
-       ("bs" orgblog-serve "Serve site")
-       ("bd" orgblog-push "Push to Github"))
-      "Notes"
-      (("1" denote-link "link to note"))))
+  (major-mode-hydra-define org-mode
+    (:quit-key "q")
+    ("Export"
+     (("m" rlr/org-mkpdf "Make PDF with PDFLaTeX")
+      ("p" rlr/org-open-pdf "View PDF")
+      ("h" make-html "HTML")
+      ("l" rlr/org-mklua "Make PDF with LuaLaTeX")
+      ("el" org-latex-export-to-latex "Org to LaTeX")
+      ("eb" org-beamer-export-to-pdf "Org to Beamer-PDF")
+      ("eB" org-beamer-export-to-latex "Org to Beamer-LaTeX")
+      ("s" lecture-slides "Lecture slides")
+      ("n" lecture-notes "Lecture notes")
+      ("ep" present "Present slides")
+      ("ec" canvas-copy "Copy HTML for Canvas")
+      ("es" canvas-notes "HTML Canvas notes")
+      ("eS" make-syllabus "Syllabus")
+      ("eh" make-handout "Handout")
+      ("c" tex-clean "clean aux")
+      ("C" tex-clean-all "clean all"))
+     "Edit"
+     (("a" org-appear-mode :toggle t)
+      ("dd" org-deadline "deadline")
+      ("ds" org-schedule "schedule")
+      ("r" org-refile "refile")
+      ("du" rlr/org-date "update date stamp")
+      ;; ("fn" org-footnote-new "insert footnote")
+      ("ff" org-footnote-action "edit footnote")
+      ("fc" citar-insert-citation "citation")
+      ("il" org-mac-link-safari-insert-frontmost-url "insert safari link")
+      ("y" yankpad-set-category "set yankpad"))
+     "View"
+     (("vi" consult-org-heading "iMenu")
+      ("vu" org-toggle-pretty-entities "org-pretty")
+      ("vI" org-toggle-inline-images "Inline images"))
+     "Blog"
+     (("bn" rlrt-new-post "New draft")
+      ("bt" orgblog-add-tag "Add tag")
+      ("bi" orgblog-insert-image "Insert image")
+      ("bp" orgblog-publish-draft "Publish draft")
+      ("bb" orgblog-build "Build site")
+      ("bs" orgblog-serve "Serve site")
+      ("bd" orgblog-push "Push to Github"))
+     "Notes"
+     (("1" denote-link "link to note"))))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define dired-mode
-     (:quit-key "q")
-     ("New"
-      (("a" rlrt-new-article "article")
-       ("l" rlrt-new-lecture "lecture")
-       ("h" rlrt-new-handout "handout")
-       ("s" rlrt-new-syllabus "syllabus"))
-      "Tools"
-      (("d" crux-open-with "Open in default program")
-       ("." dired-omit-mode "Show hidden files")
-       ("p" diredp-copy-abs-filenames-as-kill "Copy filename and path")
-       ("n" dired-toggle-read-only "edit Filenames"))
-      "Blog"
-      (("bn" rlrt-new-post "New draft")
-       ("bb" orgblog-build "Build Site")
-       ("bs" orgblog-serve "Serve Site")
-       ("bd" orgblog-push "Push to Github"))))
+  (major-mode-hydra-define dired-mode
+    (:quit-key "q")
+    ("New"
+     (("a" rlrt-new-article "article")
+      ("l" rlrt-new-lecture "lecture")
+      ("h" rlrt-new-handout "handout")
+      ("s" rlrt-new-syllabus "syllabus"))
+     "Tools"
+     (("d" crux-open-with "Open in default program")
+      ("." dired-omit-mode "Show hidden files")
+      ("p" diredp-copy-abs-filenames-as-kill "Copy filename and path")
+      ("n" dired-toggle-read-only "edit Filenames"))
+     "Blog"
+     (("bn" rlrt-new-post "New draft")
+      ("bb" orgblog-build "Build Site")
+      ("bs" orgblog-serve "Serve Site")
+      ("bd" orgblog-push "Push to Github"))))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define css-mode
-     (:quit-key "q")
-     ("Blog"
-      (("bn" rlrt-new-post "New draft")
-       ("bb" orgblog-build "Build Site")
-       ("bs" orgblog-serve "Serve Site")
-       ("bd" orgblog-push "Push to Github"))))
+  (major-mode-hydra-define css-mode
+    (:quit-key "q")
+    ("Blog"
+     (("bn" rlrt-new-post "New draft")
+      ("bb" orgblog-build "Build Site")
+      ("bs" orgblog-serve "Serve Site")
+      ("bd" orgblog-push "Push to Github"))))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define denote-menu-mode
-     (:quit-key "q")
-     ("Tools"
-      (("f" denote-menu-filter "Filter by regex")
-       ("k" denote-menu-filter-by-keyword "Filter by keyword")
-       ("c" denote-menu-clear-filters "Clear filters")
-       ("d" denote-menu-export-to-dired "Dired"))))
+  (major-mode-hydra-define denote-menu-mode
+    (:quit-key "q")
+    ("Tools"
+     (("f" denote-menu-filter "Filter by regex")
+      ("k" denote-menu-filter-by-keyword "Filter by keyword")
+      ("c" denote-menu-clear-filters "Clear filters")
+      ("d" denote-menu-export-to-dired "Dired"))))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define mu4e-main-mode
-     (:quit-key "q")
-     ("Message"
-      (
-       ("n" mu4e-compose-mail "New")
-       ("e" mu4e-view-save-attachments "Save attachments")
-       )))
+  (major-mode-hydra-define mu4e-main-mode
+    (:quit-key "q")
+    ("Message"
+     (
+      ("n" mu4e-compose-mail "New")
+      ("e" mu4e-view-save-attachments "Save attachments")
+      )))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define mu4e-headers-mode
-     (:quit-key "q")
-     ("Message"
-      (
-       ("n" mu4e-compose-mail "New")
-       ("r" mu4e-compose-reply "Reply")
-       ("a"  mu4e-compose-wide-reply "Reply All")
-       )))
+  (major-mode-hydra-define mu4e-headers-mode
+    (:quit-key "q")
+    ("Message"
+     (
+      ("n" mu4e-compose-mail "New")
+      ("r" mu4e-compose-reply "Reply")
+      ("a"  mu4e-compose-wide-reply "Reply All")
+      )))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define mu4e-view-mode
-     (:quit-key "q")
-     ("Message"
-      (
-       ("n" mu4e-compose-mail "New")
-       ("r" mu4e-compose-reply "Reply")
-       ("a"  mu4e-compose-wide-reply "Reply All")
-       )
-      "Browser"
-      (
-       ("bd" rlr/browser-default "System default")
-       ("bq" rlr/browser-qutebrowser "Qutebrowser")
-       ("be" rlr/browser-eww "EWW")
-       )))
+  (major-mode-hydra-define mu4e-view-mode
+    (:quit-key "q")
+    ("Message"
+     (
+      ("n" mu4e-compose-mail "New")
+      ("r" mu4e-compose-reply "Reply")
+      ("a"  mu4e-compose-wide-reply "Reply All")
+      )
+     "Browser"
+     (
+      ("bd" rlr/browser-default "System default")
+      ("bq" rlr/browser-qutebrowser "Qutebrowser")
+      ("be" rlr/browser-eww "EWW")
+      )))
 #+end_src
 
 #+begin_src emacs-lisp
 
-   (major-mode-hydra-define mu4e-compose-mode
-     (:quit-key "q")
-     ("Compose with Org"
-      (
-       ("o" org-mime-edit-mail-in-org-mode "Edit in org")
-       ("r" org-mime-htmlize "Org to HTML")
-       )))
+  (major-mode-hydra-define mu4e-compose-mode
+    (:quit-key "q")
+    ("Compose with Org"
+     (
+      ("o" org-mime-edit-mail-in-org-mode "Edit in org")
+      ("r" org-mime-htmlize "Org to HTML")
+      )))
 #+end_src
 
 ** Prefix Keybindings
 
 #+begin_src emacs-lisp
-(global-set-key (kbd "C-c a") #'org-agenda)
-(global-set-key (kbd "C-c b") #'consult-bookmark)
-(global-set-key (kbd "C-c c") #'org-capture)
+  (global-set-key (kbd "C-c a") #'org-agenda)
+  (global-set-key (kbd "C-c b") #'consult-bookmark)
+  (global-set-key (kbd "C-c c") #'org-capture)
 
-(global-set-key (kbd "C-c d s") #'insert-date-string)
-(global-set-key (kbd "C-c d d") #'insert-standard-date)
-(global-set-key (kbd "C-c d b") #'insert-blog-date)
-(global-set-key (kbd "C-c d l") #'dictionary-search)
-(global-set-key (kbd "C-c D") #'crux-delete-file-and-buffer)
+  (global-set-key (kbd "C-c d s") #'insert-date-string)
+  (global-set-key (kbd "C-c d d") #'insert-standard-date)
+  (global-set-key (kbd "C-c d b") #'insert-blog-date)
+  (global-set-key (kbd "C-c d l") #'dictionary-search)
+  (global-set-key (kbd "C-c D") #'crux-delete-file-and-buffer)
 
-(global-set-key (kbd "C-c f f") #'find-file)
-(global-set-key (kbd "C-c f k") #'rlr/kill-other-buffers)
-(global-set-key (kbd "C-c f r") #'consult-buffer)
-(global-set-key (kbd "C-c f R") #'crux-rename-file-and-buffer)
-(global-set-key (kbd "C-c f P") #'open-emacs-config)
-(global-set-key (kbd "C-c f S") #'open-fish-functions)
+  (global-set-key (kbd "C-c f f") #'find-file)
+  (global-set-key (kbd "C-c f k") #'rlr/kill-other-buffers)
+  (global-set-key (kbd "C-c f r") #'consult-buffer)
+  (global-set-key (kbd "C-c f R") #'crux-rename-file-and-buffer)
+  (global-set-key (kbd "C-c f P") #'open-emacs-config)
+  (global-set-key (kbd "C-c f S") #'open-fish-functions)
 
-(global-set-key (kbd "C-c g l") #'avy-goto-line)
-(global-set-key (kbd "C-c g w") #'avy-goto-word-1)
-(global-set-key (kbd "C-c g p") #'pdf-sync-forward-search)
+  (global-set-key (kbd "C-c g l") #'avy-goto-line)
+  (global-set-key (kbd "C-c g w") #'avy-goto-word-1)
+  (global-set-key (kbd "C-c g p") #'pdf-sync-forward-search)
 
-;; "h") #'consult-history)
+  ;; "h") #'consult-history)
 
-;; Helpful
-(global-set-key (kbd "C-c H c") #'helpful-command)
-(global-set-key (kbd "C-c H F") #'helpful-callable)
-(global-set-key (kbd "C-c H h") #'helpful-at-point)
-(global-set-key (kbd "C-c H f") #'helpful-function)
-(global-set-key (kbd "C-c H v") #'helpful-variable)
-(global-set-key (kbd "C-c H k") #'helpful-key)
+  ;; Helpful
+  (global-set-key (kbd "C-c H c") #'helpful-command)
+  (global-set-key (kbd "C-c H F") #'helpful-callable)
+  (global-set-key (kbd "C-c H h") #'helpful-at-point)
+  (global-set-key (kbd "C-c H f") #'helpful-function)
+  (global-set-key (kbd "C-c H v") #'helpful-variable)
+  (global-set-key (kbd "C-c H k") #'helpful-key)
 
-(global-set-key (kbd "C-c k") #'rlr/kill-other-buffers)
+  (global-set-key (kbd "C-c k") #'rlr/kill-other-buffers)
 
-(global-set-key (kbd "C-c m") #'consult-mark)
+  (global-set-key (kbd "C-c m") #'consult-mark)
 
-;; Denote search
-(global-set-key (kbd "C-c n s") #'denote-search)
-(global-set-key (kbd "C-c n d") #'denote-search-marked-dired-files)
-(global-set-key (kbd "C-c n r") #'denote-search-files-referenced-in-region)
+  ;; Denote search
+  (global-set-key (kbd "C-c n s") #'denote-search)
+  (global-set-key (kbd "C-c n d") #'denote-search-marked-dired-files)
+  (global-set-key (kbd "C-c n r") #'denote-search-files-referenced-in-region)
 
-(global-set-key (kbd "C-c o") #'consult-outline)
+  (global-set-key (kbd "C-c o") #'consult-outline)
 
-;; Projects
-(global-set-key (kbd "C-c p f") #'consult-project-buffer)
-(global-set-key (kbd "C-c p d") #'project-find-dired)
+  ;; Projects
+  (global-set-key (kbd "C-c p f") #'consult-project-buffer)
+  (global-set-key (kbd "C-c p d") #'project-find-dired)
 
-(global-set-key (kbd "C-c r") #'crux-rename-file-and-buffer)
-(global-set-key (kbd "C-c S") #'crux-cleanup-buffer-or-region)
-(global-set-key (kbd "C-c t") #'terminal-here-launch)
-(global-set-key (kbd "C-c u") #'unfill-paragraph)
-(global-set-key (kbd "C-c w") #'kill-buffer-and-window)
-(global-set-key (kbd "C-c z") #'reveal-in-osx-finder)
+  (global-set-key (kbd "C-c r") #'crux-rename-file-and-buffer)
+  (global-set-key (kbd "C-c S") #'crux-cleanup-buffer-or-region)
+  (global-set-key (kbd "C-c t") #'terminal-here-launch)
+  (global-set-key (kbd "C-c u") #'unfill-paragraph)
+  (global-set-key (kbd "C-c w") #'kill-buffer-and-window)
+  (global-set-key (kbd "C-c z") #'reveal-in-osx-finder)
 
 #+end_src
 
 * Finish
+
+** Reload Init
 
 This reloads the Emacs config file to test changes.
 
@@ -4556,7 +4618,24 @@ This reloads the Emacs config file to test changes.
     (load-file user-init-file))
 #+end_src
 
-Set default directory.
+
+** Display Startup Time
+
+#+begin_src emacs-lisp
+  (defun rlr/display-startup-time ()
+    (message "Emacs loaded in %s with %d garbage collections."
+	     (format "%.2f seconds"
+		     (float-time
+		(time-subtract after-init-time before-init-time)))
+	     gcs-done))
+
+  (add-hook 'emacs-startup-hook #'rlr/display-startup-time)
+#+end_src
+
+
+
+
+** Set Default Directory
 
 #+begin_src emacs-lisp
   (setq default-directory "~/")
@@ -4571,4 +4650,3 @@ Set default directory.
   ;; no-update-autoloads: t
   ;; End:
 #+end_src
-

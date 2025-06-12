@@ -35,6 +35,8 @@
 (setq scroll-conservatively 10
 	scroll-margin 0)
 
+(setq server-client-instructions nil)
+
 (setq frame-resize-pixelwise t)
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
